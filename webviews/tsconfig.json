@@ -1,0 +1,20 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "module": "esnext",
+        "target": "es2020",
+        "lib": ["es2020", "dom"],
+        "sourceMap": true,
+        "rootDir": ".",
+        "strict": true,
+        "esModuleInterop": true,
+        "moduleResolution": "node",
+        "types": ["svelte"],
+        "isolatedModules": true,
+        "allowJs": true,
+        "checkJs": true,
+        "resolveJsonModule": true
+    },
+    "include": ["./**/*", "./**/*.svelte"],
+    "exclude": ["node_modules/*", "__sapper__/*", "public/*"]
+}
