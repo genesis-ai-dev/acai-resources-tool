@@ -1,26 +1,12 @@
-# Dependencies
-node_modules/
-
-# Compiled output
-dist/
-out/
-
-# Logs
-*.log
-npm-debug.log*
-
-# Operating System Files
+out
+dist
+node_modules
+.vscode-test/
+*.vsix
+/.vscode
+/comments.json
+/pnpm-lock.yaml
+/src/.DS_Store
 .DS_Store
-Thumbs.db
-
-# IDE and Editor folders
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
+package-lock.json
+.pnpm-store/
