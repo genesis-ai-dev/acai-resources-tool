@@ -29,7 +29,7 @@
         {
           "id": "acai-resources",
           "title": "ACAI Resources",
-          "icon": "$(symbol-library)"
+          "icon": "./media/container_icon.svg"
         }
       ]
     },
