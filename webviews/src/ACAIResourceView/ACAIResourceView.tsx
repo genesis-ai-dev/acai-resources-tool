@@ -37,18 +37,30 @@ const ACAIResourceView: React.FC = () => {
   };
 
   return (
-    <div>
-      <select value={selectedOption} onChange={handleSelectChange}>
-        <option value="">Select an option</option>
-        {options.map((option, index) => (
-          <option key={index} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+    <div className="acai-resource-view">
       <h1>ACAI Resources</h1>
       <p>Welcome to the ACAI Resources tool!</p>
-      <p>Selected option: {selectedOption}</p>
+      <div className="select-container">
+        <label htmlFor="option-select">Select a book:</label>
+        <select
+          id="option-select"
+          value={selectedOption}
+          onChange={handleSelectChange}
+        >
+          <option value="">Choose an option</option>
+          {options.map((option, index) => (
+            <option key={index} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </div>
+      {selectedOption && (
+        <div className="selected-option">
+          <h2>Selected Option</h2>
+          <p>{selectedOption}</p>
+        </div>
+      )}
     </div>
   );
 };
