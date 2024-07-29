@@ -17,6 +17,12 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
+    // Send initial data to the webview
+    webviewView.webview.postMessage({
+      command: "setOptions",
+      options: ["Option 1", "Option 2", "Option 3"],
+    });
+
     // Add message listener
     webviewView.webview.onDidReceiveMessage((message) => {
       switch (message.command) {
@@ -31,6 +37,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(
         this._extensionUri,
+        "webviews",
         "dist",
         "ACAIResourceView",
         "index.js"
@@ -39,6 +46,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     const styleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(
         this._extensionUri,
+        "webviews",
         "dist",
         "ACAIResourceView",
         "index.css"
