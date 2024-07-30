@@ -1,17 +1,20 @@
 import * as vscode from "vscode";
-import { vrefData } from "../../utils/verseData";
 import { queryATLAS } from "../../utils/queryATLAS";
+import { vrefData } from "../../utils/verseData";
 
 export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "acai-resources-sidebar";
 
-  constructor(private readonly _extensionUri: vscode.Uri) {}
+  constructor(private readonly _extensionUri: vscode.Uri) {
+    console.log("ACAIResourcesViewProvider initialized");
+  }
 
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
     context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
   ) {
+    console.log("Resolving webview view");
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [this._extensionUri],
@@ -19,27 +22,51 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-    // Send initial data to the webview
-    const bookOptions = Object.entries(vrefData)
-      .sort(([, a], [, b]) => parseInt(a.ord ?? "0") - parseInt(b.ord ?? "0"))
-      .map(([, bookData]) => ({
-        name: bookData.name ?? "",
-        id: bookData.id ?? "",
-      }));
-
+    // Get book data and send it to the webview
+    const bookData = this.getBookData();
+    console.log("Sending book data to webview:", bookData);
     webviewView.webview.postMessage({
-      command: "setOptions",
-      options: bookOptions,
+      command: "setBookData",
+      bookData: bookData,
     });
+
+    console.log("Message posted to webview");
 
     // Add message listener
     webviewView.webview.onDidReceiveMessage((message) => {
+      console.log(`Received message from webview: ${JSON.stringify(message)}`);
       switch (message.command) {
+        case "requestInitialData":
+          console.log("Received requestInitialData, sending book data");
+          const bookData = this.getBookData();
+          webviewView.webview.postMessage({
+            command: "setBookData",
+            bookData: bookData,
+          });
+          return;
         case "search":
           this.handleSearch(message.bookId, message.verseRef, webviewView);
           return;
       }
     });
+  }
+  private getBookData() {
+    console.log("Fetching book data");
+    const bookData = Object.entries(vrefData)
+      .map(([id, book]) => {
+        console.log(`Processing book: ${id} - ${book.name}`);
+        return { id, name: book.name };
+      })
+      .sort((a, b) => {
+        const ordA = vrefData[a.id]?.ord;
+        const ordB = vrefData[b.id]?.ord;
+        if (ordA && ordB) {
+          return ordA.localeCompare(ordB);
+        }
+        return 0;
+      });
+    console.log(`Sorted ${bookData.length} books`);
+    return bookData;
   }
 
   private async handleSearch(
@@ -47,8 +74,10 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     verseRef: string,
     webviewView: vscode.WebviewView
   ) {
+    console.log(`Handling search for book ${bookId}, verse ${verseRef}`);
     try {
       const result = await queryATLAS(bookId, verseRef);
+      console.log("Search completed successfully");
       webviewView.webview.postMessage({
         command: "searchResult",
         result: result,
@@ -63,11 +92,12 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
   }
 
   private _getHtmlForWebview(webview: vscode.Webview) {
+    console.log("Generating HTML for webview");
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(
         this._extensionUri,
-        "webviews",
         "dist",
+        "webviews",
         "ACAIResourceView",
         "index.js"
       )
@@ -75,8 +105,8 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     const styleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(
         this._extensionUri,
-        "webviews",
         "dist",
+        "webviews",
         "ACAIResourceView",
         "index.css"
       )

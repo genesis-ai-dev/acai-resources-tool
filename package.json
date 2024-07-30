@@ -65,17 +65,14 @@
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
-    "compile": "pnpm run webpack",
-    "watch": "concurrently \"pnpm run webpack-watch\" \"pnpm run watch-webviews\"",
-    "webpack-watch": "webpack --config ./webpack.config.js --watch",
-    "watch-webviews": "cd webviews && pnpm run watch",
-    "package": "pnpm run webpack -- --mode production --devtool hidden-source-map",
+    "compile": "webpack",
+    "watch": "concurrently \"webpack --watch\" \"cd webviews && pnpm run watch\"",
+    "package": "webpack --mode production --devtool hidden-source-map && cd webviews && pnpm run build:all",
     "compile-tests": "pnpm run tsc -- -p . --outDir out",
     "watch-tests": "pnpm run tsc -- -p . -w --outDir out",
     "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
     "lint": "pnpm run eslint -- src --ext ts",
-    "test": "node ./out/test/runTest.js",
-    "webpack": "webpack --config ./webpack.config.js"
+    "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.3",

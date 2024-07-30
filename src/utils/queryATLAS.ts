@@ -1,53 +1,24 @@
-let ApolloClient: any, InMemoryCache: any, gql: any;
-
-// Dynamic import of Apollo Client modules
-import("@apollo/client/core").then((module) => {
-  ApolloClient = module.ApolloClient;
-  InMemoryCache = module.InMemoryCache;
-  gql = module.gql;
-});
-
-// Create an Apollo Client instance
-let client: any;
-
-async function initializeClient() {
-  if (!client) {
-    client = new ApolloClient({
-      uri: "YOUR_ATLAS_API_ENDPOINT", // Replace with the actual ATLAS API endpoint
-      cache: new InMemoryCache(),
-    });
-  }
-}
+// TODO: Implement a function to fetch data from ATLAS API without using Apollo Client
 
 export async function queryATLAS(
   bookId: string,
   verseRef: string
 ): Promise<any> {
-  await initializeClient();
-
-  const QUERY = gql`
-    query GetPassage($scriptureReference: ScriptureReferenceInput!) {
-      passage(filters: { scriptureReference: $scriptureReference }) {
-        ref
-        textContent
-        textualEdition {
-          usfmRef
-        }
-      }
-    }
-  `;
+  // TODO: Implement the API call to ATLAS using fetch or another HTTP client
 
   try {
-    const { data } = await client.query({
-      query: QUERY,
-      variables: {
-        scriptureReference: {
-          usfmRef: `${bookId} ${verseRef}`,
-        },
-      },
-    });
+    console.log(`Querying ATLAS for book ${bookId}, verse ${verseRef}`);
+    // TODO: Make the API request to ATLAS
+    // TODO: Parse the response and extract the relevant data
 
-    return data.passage[0]; // Assuming the query returns an array with one passage
+    // TODO: Return the parsed data in a format similar to the previous implementation
+    return {
+      ref: `${bookId} ${verseRef}`,
+      textContent: "TODO: Implement actual API call",
+      textualEdition: {
+        usfmRef: `${bookId} ${verseRef}`,
+      },
+    };
   } catch (error) {
     console.error("Error querying ATLAS:", error);
     throw error;

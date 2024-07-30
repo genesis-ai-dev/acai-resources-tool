@@ -36,10 +36,13 @@ const extensionConfig = {
     rules: [
       {
         test: /\.ts$/,
-        exclude: /node_modules/,
+        exclude: [/node_modules/, /webviews/], // Add /webviews/ to exclude
         use: [
           {
             loader: "ts-loader",
+            options: {
+              configFile: path.resolve(__dirname, "tsconfig.json"),
+            },
           },
         ],
       },
@@ -66,41 +69,4 @@ const extensionConfig = {
   },
 };
 
-const webviewConfig = {
-  target: "web",
-  mode: "development",
-  entry: "./webviews/src/ACAIResourceView/index.tsx",
-  output: {
-    path: path.resolve(__dirname, "webviews/dist/ACAIResourceView"),
-    filename: "index.js",
-    libraryTarget: "commonjs2"
-  },
-  resolve: {
-    extensions: [".ts", ".tsx", ".js", ".jsx"],
-  },
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        use: [
-          {
-            loader: "ts-loader",
-            options: {
-              configFile: path.resolve(__dirname, "webviews/tsconfig.json"),
-            },
-          },
-        ],
-        exclude: /node_modules/,
-      },
-      {
-        test: /\.css$/,
-        use: ["style-loader", "css-loader"],
-      },
-    ],
-  },
-  externals: {
-    vscode: "commonjs vscode"
-  },
-};
-
-module.exports = [extensionConfig, webviewConfig];
+module.exports = [extensionConfig];
