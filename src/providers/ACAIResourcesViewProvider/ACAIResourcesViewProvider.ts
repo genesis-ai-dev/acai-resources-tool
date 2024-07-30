@@ -84,9 +84,13 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
       });
     } catch (error) {
       console.error("Error querying ATLAS:", error);
+      let errorMessage = "An error occurred while searching. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
       webviewView.webview.postMessage({
         command: "searchError",
-        error: "An error occurred while searching. Please try again.",
+        error: errorMessage,
       });
     }
   }

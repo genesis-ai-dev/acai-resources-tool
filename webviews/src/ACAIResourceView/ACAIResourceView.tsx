@@ -110,14 +110,11 @@ const ACAIResourceView: React.FC = () => {
             onChange={handleSelectChange}
           >
             <option value="">Choose a book</option>
-            {options.map((option) => {
-              console.log("Rendering book option:", option);
-              return (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              );
-            })}
+            {options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
           </select>
           <input
             type="text"
