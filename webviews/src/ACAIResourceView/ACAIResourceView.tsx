@@ -6,8 +6,8 @@ declare global {
     acquireVsCodeApi: () => any;
   }
 }
-
-const vscode = window.acquireVsCodeApi();
+// Ensure that the acquireVsCodeApi function is defined in the window object
+const vscode = window.acquireVsCodeApi ? window.acquireVsCodeApi() : undefined;
 
 const ACAIResourceView: React.FC = () => {
   const [selectedOption, setSelectedOption] = useState("");

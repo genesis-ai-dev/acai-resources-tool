@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "pnpm run vite",
+    "dev": "vite",
     "build:ACAIResourceView": "cross-env APP_NAME=ACAIResourceView vite build",
     "build:all": "pnpm run build:ACAIResourceView",
     "watch": "nodemon --watch src --ext ts,tsx --exec \"pnpm run build:all\"",
