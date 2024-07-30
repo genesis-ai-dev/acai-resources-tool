@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { gql } from '@apollo/client'
+import { useQuery, gql } from '@apollo/client'
+
 import "./ACAIResourceView.css";
 
 declare global {
@@ -10,14 +11,14 @@ declare global {
 // Ensure that the acquireVsCodeApi function is defined in the window object
 const vscode = window.acquireVsCodeApi ? window.acquireVsCodeApi() : undefined;
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const QUERY = gql`
-query ACAIRecords {
-  acaiRecords {
-    label
-    uri
+
+const ACAI_RECORDS_IN_PASSAGE = gql`
+  query ACAIRecordsInPassage($acaiRecordsFilters: AcaiRecordFilter) {
+    acaiRecords(filters: $acaiRecordsFilters) {
+      label
+      uri
+    }
   }
-}
 `
 const ACAIResourceView: React.FC = () => {
   const [selectedOption, setSelectedOption] = useState("");
@@ -45,6 +46,20 @@ const ACAIResourceView: React.FC = () => {
       value: event.target.value,
     });
   };
+  const queryVariables = {
+    "acaiRecordsFilters": {
+      "scriptureReference": {
+        "usfmRef": "JHN 6:1",
+        "textualEdition": "SBLGNT"
+      }
+    }
+  }
+  const { loading, error, data } = useQuery(ACAI_RECORDS_IN_PASSAGE, {
+    variables: queryVariables,
+  })
+
+  if (loading) return <p>Loading...</p>
+  if (error) return <p>Error : {error.message}</p>
 
   return (
     <div>
@@ -59,6 +74,15 @@ const ACAIResourceView: React.FC = () => {
       <h1>ACAI Resources</h1>
       <p>Welcome to the ACAI Resources tool!</p>
       <p>Selected option: {selectedOption}</p>
+      {data && data.acaiRecords && (
+        <ul>
+          {data.acaiRecords.map((record: any) => (
+            <li key={record.uri}>
+              {record.label} - {record.uri}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };
