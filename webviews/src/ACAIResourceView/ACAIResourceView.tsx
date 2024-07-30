@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { gql } from '@apollo/client'
 import "./ACAIResourceView.css";
 
 declare global {
@@ -9,6 +10,15 @@ declare global {
 // Ensure that the acquireVsCodeApi function is defined in the window object
 const vscode = window.acquireVsCodeApi ? window.acquireVsCodeApi() : undefined;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const QUERY = gql`
+query ACAIRecords {
+  acaiRecords {
+    label
+    uri
+  }
+}
+`
 const ACAIResourceView: React.FC = () => {
   const [selectedOption, setSelectedOption] = useState("");
   const [options, setOptions] = useState<string[]>([]);
