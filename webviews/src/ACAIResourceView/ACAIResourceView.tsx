@@ -9,9 +9,17 @@ declare global {
 
 const vscode = window.acquireVsCodeApi();
 
+interface BookOption {
+  name: string;
+  id: string;
+}
+
 const ACAIResourceView: React.FC = () => {
   const [selectedOption, setSelectedOption] = useState("");
-  const [options, setOptions] = useState<string[]>([]);
+  const [options, setOptions] = useState<BookOption[]>([]);
+  const [textInput, setTextInput] = useState("");
+  const [searchResult, setSearchResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const messageListener = (event: MessageEvent) => {
@@ -19,6 +27,14 @@ const ACAIResourceView: React.FC = () => {
       switch (message.command) {
         case "setOptions":
           setOptions(message.options);
+          break;
+        case "searchResult":
+          setSearchResult(message.result);
+          setError(null);
+          break;
+        case "searchError":
+          setError(message.error);
+          setSearchResult(null);
           break;
       }
     };
@@ -30,10 +46,28 @@ const ACAIResourceView: React.FC = () => {
 
   const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedOption(event.target.value);
-    vscode.postMessage({
-      command: "optionSelected",
-      value: event.target.value,
-    });
+  };
+
+  const handleTextInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = event.target.value;
+    if (/^[0-9:\s-]*$/.test(value)) {
+      setTextInput(value);
+    }
+  };
+
+  const handleSearch = () => {
+    const selectedBook = options.find(
+      (option) => option.name === selectedOption
+    );
+    if (selectedBook) {
+      vscode.postMessage({
+        command: "search",
+        bookId: selectedBook.id,
+        verseRef: textInput,
+      });
+    }
   };
 
   return (
@@ -42,23 +76,36 @@ const ACAIResourceView: React.FC = () => {
       <p>Welcome to the ACAI Resources tool!</p>
       <div className="select-container">
         <label htmlFor="option-select">Select a book:</label>
-        <select
-          id="option-select"
-          value={selectedOption}
-          onChange={handleSelectChange}
-        >
-          <option value="">Choose an option</option>
-          {options.map((option, index) => (
-            <option key={index} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <div className="input-container">
+          <select
+            id="option-select"
+            value={selectedOption}
+            onChange={handleSelectChange}
+          >
+            <option value="">Choose a book</option>
+            {options.map((option, index) => (
+              <option key={index} value={option.name}>
+                {option.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="text"
+            className="text-input"
+            value={textInput}
+            onChange={handleTextInputChange}
+            placeholder="verse ref."
+          />
+          <button className="search-button" onClick={handleSearch}>
+            Search
+          </button>
+        </div>
       </div>
-      {selectedOption && (
-        <div className="selected-option">
-          <h2>Selected Option</h2>
-          <p>{selectedOption}</p>
+      {error && <div className="error-message">{error}</div>}
+      {searchResult && (
+        <div className="search-result">
+          <h2>Search Result</h2>
+          <pre>{JSON.stringify(searchResult, null, 2)}</pre>
         </div>
       )}
     </div>

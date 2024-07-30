@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import { vrefData } from "../../utils/verseData";
+import { queryATLAS } from "../../utils/queryATLAS";
 
 export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "acai-resources-sidebar";
@@ -18,19 +20,46 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
     // Send initial data to the webview
+    const bookOptions = Object.entries(vrefData)
+      .sort(([, a], [, b]) => parseInt(a.ord ?? "0") - parseInt(b.ord ?? "0"))
+      .map(([, bookData]) => ({
+        name: bookData.name ?? "",
+        id: bookData.id ?? "",
+      }));
+
     webviewView.webview.postMessage({
       command: "setOptions",
-      options: ["Option 1", "Option 2", "Option 3"],
+      options: bookOptions,
     });
 
     // Add message listener
     webviewView.webview.onDidReceiveMessage((message) => {
       switch (message.command) {
-        case "alert":
-          vscode.window.showInformationMessage(message.text);
+        case "search":
+          this.handleSearch(message.bookId, message.verseRef, webviewView);
           return;
       }
     });
+  }
+
+  private async handleSearch(
+    bookId: string,
+    verseRef: string,
+    webviewView: vscode.WebviewView
+  ) {
+    try {
+      const result = await queryATLAS(bookId, verseRef);
+      webviewView.webview.postMessage({
+        command: "searchResult",
+        result: result,
+      });
+    } catch (error) {
+      console.error("Error querying ATLAS:", error);
+      webviewView.webview.postMessage({
+        command: "searchError",
+        error: "An error occurred while searching. Please try again.",
+      });
+    }
   }
 
   private _getHtmlForWebview(webview: vscode.Webview) {

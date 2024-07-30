@@ -2,7 +2,6 @@
   "name": "acai-resources-tool-webviews",
   "private": true,
   "version": "0.0.1",
-  "type": "module",
   "scripts": {
     "dev": "pnpm run vite",
     "build:ACAIResourceView": "cross-env APP_NAME=ACAIResourceView vite build",

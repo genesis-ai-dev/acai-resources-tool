@@ -1,0 +1,187 @@
+body {
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  color: var(--vscode-foreground);
+  background-color: var(--vscode-editor-background);
+  padding: 20px;
+  margin: 0 0px; /* Add horizontal margins */
+}
+
+.select-container {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  margin-left: 20px; /* Add left margin */
+  margin-right: 20px; /* Add right margin */
+  color: var(--vscode-input-foreground);
+}
+
+.input-container {
+  display: flex;
+  align-items: center;
+  margin-left: 20px;
+  margin-right: 10px;
+}
+
+select {
+  flex: 1;
+  width: auto;
+  margin-right: 10px; /* Changed from 0 to 10px */
+  padding: 8px 12px;
+  border: 1px solid var(--vscode-dropdown-border);
+  border-radius: 2px;
+  background-color: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-dropdown-font-size, var(--vscode-font-size));
+  cursor: pointer;
+  outline: none;
+}
+
+select:focus {
+  border-color: var(--vscode-focusBorder);
+  outline: 1px solid var(--vscode-focusBorder);
+}
+
+select:hover {
+  border-color: var(--vscode-input-hoverBorder, var(--vscode-dropdown-border));
+}
+
+select option {
+  background-color: var(--vscode-dropdown-listBackground);
+  color: var(--vscode-dropdown-foreground);
+}
+
+.number-input {
+  width: 60px;
+  padding: 8px;
+  margin-left: 10px;
+  margin-right: 10px;
+  border: 1px solid var(--vscode-dropdown-border);
+  border-radius: 2px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+.number-input:focus {
+  border-color: var(--vscode-focusBorder);
+  outline: 1px solid var(--vscode-focusBorder);
+}
+
+.text-input {
+  width: 120px;
+  padding: 8px;
+  margin-right: 10px;
+  border: 1px solid var(--vscode-dropdown-border);
+  border-radius: 2px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+.text-input:focus {
+  border-color: var(--vscode-focusBorder);
+  outline: 1px solid var(--vscode-focusBorder);
+}
+
+h1 {
+  font-size: 1.5em;
+  margin-bottom: 16px;
+  margin-left: 20px; /* Add left margin */
+  margin-right: 20px; /* Add right margin */
+  color: var(--vscode-foreground);
+}
+
+p {
+  margin-bottom: 8px;
+  margin-left: 20px; /* Add left margin */
+  margin-right: 20px; /* Add right margin */
+}
+
+.selected-option {
+  margin-top: 20px;
+  margin-left: 20px; /* Add left margin */
+  margin-right: 20px; /* Add right margin */
+  padding: 12px;
+  background-color: var(--vscode-editor-inactiveSelectionBackground);
+  border-radius: 4px;
+}
+
+.selected-option h2 {
+  font-size: 1.2em;
+  margin-bottom: 8px;
+  color: var(--vscode-editor-foreground);
+}
+
+button {
+  padding: 8px 16px;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.search-result {
+  margin-top: 20px;
+  padding: 12px;
+  background-color: var(--vscode-editor-inactiveSelectionBackground);
+  border-radius: 4px;
+}
+
+.search-result h2 {
+  font-size: 1.2em;
+  margin-bottom: 8px;
+  color: var(--vscode-editor-foreground);
+}
+
+/* New styles for passage data */
+.passage-data {
+  margin-bottom: 20px;
+  padding: 10px;
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+}
+
+.token-data {
+  margin-bottom: 10px;
+  padding-left: 10px;
+  border-left: 2px solid var(--vscode-textLink-foreground);
+}
+
+.token-data ul {
+  padding-left: 20px;
+}
+
+.token-data li {
+  margin-bottom: 5px;
+}
+
+.search-button {
+  padding: 8px 16px;
+  margin-right: 10px;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+.search-button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
