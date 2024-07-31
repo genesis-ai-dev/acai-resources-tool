@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
-import { queryATLAS } from "../../utils/queryATLAS";
-import { vrefData } from "../../utils/verseData";
+import { queryATLAS } from "../utils/queryATLAS";
+import { vrefData } from "../utils/verseData";
+import { AcaiRecord } from "../../types";
 
 export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "acai-resources-sidebar";
@@ -76,7 +77,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
   ) {
     console.log(`Handling search for book ${bookId}, verse ${verseRef}`);
     try {
-      const result = await queryATLAS(bookId, verseRef);
+      const result: AcaiRecord[] = await queryATLAS(bookId, verseRef);
       console.log("Search completed successfully");
       webviewView.webview.postMessage({
         command: "searchResult",

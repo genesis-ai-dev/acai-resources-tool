@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./ACAIResourceView.css";
+import { AcaiRecord } from "../../../src/types/index";
 
 declare global {
   interface Window {
@@ -21,6 +22,7 @@ const ACAIResourceView: React.FC = () => {
   const [textInput, setTextInput] = useState("");
   const [searchResult, setSearchResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expandedResult, setExpandedResult] = useState<string | null>(null);
 
   useEffect(() => {
     console.log("ACAIResourceView component mounted");
@@ -94,15 +96,19 @@ const ACAIResourceView: React.FC = () => {
     }
   };
 
-  console.log("Current options:", options);
+  const handleResultClick = (id: string) => {
+    setExpandedResult(expandedResult === id ? null : id);
+  };
+
   console.log("Selected option:", selectedOption);
 
   return (
     <div className="acai-resource-view">
       <h1>ACAI Resources</h1>
-      <p>Welcome to the ACAI Resources tool!</p>
       <div className="select-container">
-        <label htmlFor="option-select">Select a book:</label>
+        <label htmlFor="option-select">
+          Select a verse reference or range:
+        </label>
         <div className="input-container">
           <select
             id="option-select"
@@ -128,23 +134,35 @@ const ACAIResourceView: React.FC = () => {
           </button>
         </div>
       </div>
-      {error && (
-        <div className="error-message">
-          {(() => {
-            console.error("Displaying error:", error);
-            return null;
-          })()}
-          {error}
-        </div>
-      )}
+      {error && <div className="error-message">{error}</div>}
       {searchResult && (
         <div className="search-result">
           <h2>Search Result</h2>
-          {(() => {
-            console.log("Displaying search result:", searchResult);
-            return null;
-          })()}
-          <pre>{JSON.stringify(searchResult, null, 2)}</pre>
+          <ul className="result-list">
+            {searchResult.map((result: AcaiRecord) => (
+              <li key={result.id} className="result-item">
+                <div
+                  className="result-label"
+                  onClick={() => handleResultClick(result.id)}
+                >
+                  {result.label}
+                </div>
+                {expandedResult === result.id && (
+                  <div className="result-details">
+                    <p>
+                      <strong>Description:</strong> {result.description}
+                    </p>
+                    <p>
+                      <strong>Record Type:</strong> {result.recordType}
+                    </p>
+                    <p>
+                      <strong>URI:</strong> {result.uri}
+                    </p>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

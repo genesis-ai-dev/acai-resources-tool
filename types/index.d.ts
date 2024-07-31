@@ -1,24 +1,33 @@
-import { Dictionary, LanguageMetadata } from "codex-types";
+//import { Dictionary, LanguageMetadata } from "codex-types";
 import * as vscode from "vscode";
 interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
 }
 
-interface ProjectOverview {
-  projectName: string;
-  abbreviation: string;
-  sourceLanguage: LanguageMetadata;
-  targetLanguage: LanguageMetadata;
-  category: string;
-  userName: string;
-  sourceTextBibles?: vscode.Uri[] | never[];
-  targetTextBibles?: vscode.Uri[] | never[];
-}
+// interface ProjectOverview {
+//   projectName: string;
+//   abbreviation: string;
+//   sourceLanguage: LanguageMetadata;
+//   targetLanguage: LanguageMetadata;
+//   category: string;
+//   userName: string;
+//   sourceTextBibles?: vscode.Uri[] | never[];
+//   targetTextBibles?: vscode.Uri[] | never[];
+// }
 
 interface ChatMessageWithContext extends ChatMessage {
   context?: any; // FixMe: discuss what context could be. Cound it be a link to a note?
   createdAt: string;
+}
+
+interface AcaiRecord {
+  __typename: string;
+  id: string;
+  label: string;
+  description: string;
+  recordType: string;
+  uri: string;
 }
 
 interface FrontEndMessage {
@@ -79,9 +88,9 @@ type CommentPostMessages =
   | { command: "updateCommentThread"; commentThread: NotebookCommentThread }
   | { command: "deleteCommentThread"; commentThreadId: string }
   | {
-    command: "deleteComment";
-    args: { commentId: number; commentThreadId: string };
-  }
+      command: "deleteComment";
+      args: { commentId: number; commentThreadId: string };
+    }
   | { command: "getCurrentVerseRef" }
   | { command: "fetchComments" };
 interface SelectedTextDataWithContext {
@@ -99,21 +108,21 @@ type ChatPostMessages =
   | { command: "fetch"; messages: string }
   | { command: "notifyUserError"; message: string }
   | {
-    command: "updateMessageThread";
-    messages: ChatMessageWithContext[];
-    threadId: string;
-    threadTitle?: string;
-  }
+      command: "updateMessageThread";
+      messages: ChatMessageWithContext[];
+      threadId: string;
+      threadTitle?: string;
+    }
   | { command: "deleteThread"; threadId: string }
   | { command: "fetchThread" }
   | { command: "abort-fetch" }
   | { command: "openSettings" };
 
-type DictionaryPostMessages =
-  | { command: "sendData"; data: Dictionary }
-  | { command: "updateData"; data: Dictionary }
-  | { command: "confirmRemove"; count: number }
-  | { command: "removeConfirmed" };
+// type DictionaryPostMessages =
+//   | { command: "sendData"; data: Dictionary }
+//   | { command: "updateData"; data: Dictionary }
+//   | { command: "confirmRemove"; count: number }
+//   | { command: "removeConfirmed" };
 
 type ScripturePostMessages =
   | { command: "sendScriptureData"; data: ScriptureContent }

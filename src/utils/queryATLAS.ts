@@ -1,11 +1,12 @@
 import { ApolloClient, InMemoryCache, gql } from "@apollo/client";
+import { AcaiRecord } from "../../types";
 
 const client = new ApolloClient({
   uri: "https://acai-resources-preview---symphony-api-svc-prod-25c5xl4maa-uk.a.run.app/graphql/",
   cache: new InMemoryCache(),
 });
 
-export async function sendQuery(usfmRef: string): Promise<any> {
+export async function sendQuery(usfmRef: string): Promise<AcaiRecord[]> {
   try {
     console.log(`Querying ATLAS for USFM reference: ${usfmRef}`);
 
@@ -14,6 +15,7 @@ export async function sendQuery(usfmRef: string): Promise<any> {
         acaiRecords(filters: $acaiRecordsFilters) {
           id
           label
+          description
           recordType
           uri
         }

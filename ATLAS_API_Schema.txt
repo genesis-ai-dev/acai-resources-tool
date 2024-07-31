@@ -1,0 +1,1313 @@
+schema {
+  query: SiteQuery
+  mutation: SiteMutation
+}
+
+type ACAITimestamp {
+  end: Float!
+  id: String!
+  start: Float!
+}
+
+type AcaiRecord {
+  id: String!
+  label: String!
+  recordType: AcaiRecordTypes!
+  uri: String!
+}
+
+input AcaiRecordFilter {
+  label: StrFilterLookup
+  uri: StrFilterLookup
+  scriptureReference: ScriptureReferenceInput
+  recordTypes: [AcaiRecordTypes!]
+}
+
+enum AcaiRecordTypes {
+  DEITY
+  PERSON
+  PLACE
+  SUBJECT
+}
+
+type Alignment {
+  id: ID!
+  name: String!
+  source: TextualEdition!
+  target: TextualEdition!
+}
+
+type AlignmentLink {
+  alignment: Alignment!
+  id: ID!
+  sourceTokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+  targetTokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+}
+
+input AlignmentLinkFilter {
+  alignment: IDFilterLookup!
+  AND: AlignmentLinkFilter
+  OR: AlignmentLinkFilter
+  NOT: AlignmentLinkFilter
+  DISTINCT: Boolean
+  targetScriptureReference: FullyQualifiedScriptureReferenceInput
+  sourceScriptureReference: FullyQualifiedScriptureReferenceInput
+}
+
+type Annotation {
+  acaiTimestamps(audioEdition: String!): [ACAITimestamp!]!
+  acaiTimestampsDict: JSON!
+  acaiTimestampsNative: AnnotationTimestamps!
+
+  """Ancestors of the node"""
+  ancestors(
+    """Filter ancestors by depth"""
+    depth: IntComparisonFilterLookup
+
+    """Include the node itself in the result"""
+    includeSelf: Boolean = false
+  ): [Annotation!]!
+  annotationSet: AnnotationSet!
+  articles(language: String): JSON!
+  assets: JSON!
+
+  """Audio asset attached to the annotation"""
+  audioAsset: JSON!
+
+  """Children of the node"""
+  children(filters: AnnotationFilter, pagination: OffsetPaginationInput): [Annotation!]!
+
+  """Ad hoc data attached to an annotation instance"""
+  data: JSON!
+  deityTimestamps: JSON!
+  depth: Int!
+
+  """Descendants of the node"""
+  descendants(filters: AnnotationFilter, pagination: OffsetPaginationInput): [Annotation!]!
+
+  """Returns a nested representation of the node's descendants"""
+  descendantsTree: JSON!
+  feature: AnnotationFeature!
+  id: ID!
+
+  """
+  Unique tokens of descendants of the annotation instance (not including the current instance
+  """
+  impliedTokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+  label: String
+  linkedBy(filters: AnnotationFilter, pagination: OffsetPaginationInput): [Annotation!]!
+  linkedTo: Annotation
+  localizedReference: JSON!
+  mapAssets: [Asset!]!
+
+  """The sibling that immediately follows the node"""
+  nextSibling: Annotation
+
+  """Parent of the node"""
+  parent: Annotation
+  passageAudio: JSON!
+  peopleTimestamps: JSON!
+  placeTimestamps: JSON!
+
+  """The sibling that immediately precedes the node"""
+  previousSibling: Annotation
+  scriptureReference: ScriptureReference
+
+  """Siblings of the node"""
+  siblings(
+    """Include the node itself in the result"""
+    includeSelf: Boolean = false
+  ): [Annotation!]!
+  subjectTimestamps: JSON!
+  timestamps: JSON!
+  tokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+  uri: String!
+}
+
+type AnnotationFeature {
+  annotationSet: AnnotationSet!
+  data: JSON!
+  id: ID!
+  instances(filters: AnnotationFilter, pagination: OffsetPaginationInput): [Annotation!]!
+  label: String!
+  uri: String!
+}
+
+input AnnotationFeatureFilter {
+  uri: StrFilterLookup
+  annotationSet: DjangoModelUriFilterInput
+  AND: AnnotationFeatureFilter
+  OR: AnnotationFeatureFilter
+  NOT: AnnotationFeatureFilter
+  DISTINCT: Boolean
+  scriptureReference: ScriptureReferenceInput
+}
+
+input AnnotationFilter {
+  scriptureReferenceWithAncestors: ScriptureReferenceWithAncestorsInput
+  uri: StrFilterLookup
+  depth: Int
+  AND: AnnotationFilter
+  OR: AnnotationFilter
+  NOT: AnnotationFilter
+  DISTINCT: Boolean
+  featureLabel: String
+  featureUri: String
+  annotationSetUri: String
+}
+
+type AnnotationSet {
+  data: JSON!
+  features(filters: AnnotationFeatureFilter, pagination: OffsetPaginationInput): [AnnotationFeature!]!
+  id: ID!
+  label: String!
+  uri: String!
+}
+
+input AnnotationSetFilter {
+  uri: String
+  AND: AnnotationSetFilter
+  OR: AnnotationSetFilter
+  NOT: AnnotationSetFilter
+  DISTINCT: Boolean
+  scriptureReference: ScriptureReferenceInput
+}
+
+type AnnotationTimestamps {
+  all: JSON!
+  annotation: Annotation!
+  deities: JSON!
+  people: JSON!
+  places: JSON!
+  subjects: JSON!
+}
+
+type Article {
+  """Ancestors of the node"""
+  ancestors(
+    """Filter ancestors by depth"""
+    depth: IntComparisonFilterLookup
+
+    """Include the node itself in the result"""
+    includeSelf: Boolean = false
+  ): [Article!]!
+  assets(filters: AssetFilter, pagination: OffsetPaginationInput): [Asset!]!
+
+  """Audio asset attached to the article"""
+  audioAsset: JSON!
+
+  """Children of the node"""
+  children(filters: ArticleFilter, pagination: OffsetPaginationInput): [Article!]!
+  collection: ArticleCollection!
+
+  """Descendants of the node"""
+  descendants(filters: ArticleFilter, pagination: OffsetPaginationInput): [Article!]!
+
+  """Returns a nested representation of the node's descendants"""
+  descendantsTree: JSON!
+  id: ID!
+
+  """Show localized data for an article"""
+  localized(fields: [String!] = null, languages: [String!] = null): JSON!
+
+  """The sibling that immediately follows the node"""
+  nextSibling: Article
+
+  """Parent of the node"""
+  parent: Article
+
+  """The sibling that immediately precedes the node"""
+  previousSibling: Article
+
+  """Siblings of the node"""
+  siblings(
+    """Include the node itself in the result"""
+    includeSelf: Boolean = false
+  ): [Article!]!
+  title: String
+  tokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+  uri: String!
+}
+
+type ArticleCollection {
+  data: JSON!
+  id: ID!
+  label: String
+  uri: String!
+}
+
+input ArticleCollectionFilter {
+  label: StrFilterLookup
+  uri: StrFilterLookup
+  AND: ArticleCollectionFilter
+  OR: ArticleCollectionFilter
+  NOT: ArticleCollectionFilter
+  DISTINCT: Boolean
+}
+
+input ArticleFilter {
+  uri: StrFilterLookup
+  depth: IntComparisonFilterLookup
+  collection: ArticleCollectionFilter
+  AND: ArticleFilter
+  OR: ArticleFilter
+  NOT: ArticleFilter
+  DISTINCT: Boolean
+  scriptureReference: ScriptureReferenceInput
+}
+
+type Asset {
+  collectionUri: String!
+  download: String
+  file: String
+  id: ID!
+  kind: String!
+
+  """Show localized data for an asset"""
+  localized(fields: [String!] = null, languages: [String!] = null): JSON!
+  title: String
+  uri: String!
+}
+
+input AssetFilter {
+  uri: StrFilterLookup
+  AND: AssetFilter
+  OR: AssetFilter
+  NOT: AssetFilter
+  DISTINCT: Boolean
+}
+
+type AudioEdition {
+  audioFile: DjangoFileType
+  id: ID!
+  label: String
+  textualEdition: TextualEdition!
+  uri: String!
+}
+
+type AudioRange {
+  audioEdition: AudioEdition!
+  end: Int!
+  endSeconds: Float!
+  id: ID!
+  start: Int!
+  startSeconds: Float!
+  tokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+  uri: String!
+  value: String!
+}
+
+type ConceptualNode {
+  """Ancestors of the node"""
+  ancestors(
+    """Filter ancestors by depth"""
+    depth: IntComparisonFilterLookup
+
+    """Include the node itself in the result"""
+    includeSelf: Boolean = false
+  ): [ConceptualNode!]!
+
+  """Children of the node"""
+  children(filters: ConceptualNodeFilter, pagination: OffsetPaginationInput): [ConceptualNode!]!
+  data: JSON!
+  depth: Int!
+
+  """Descendants of the node"""
+  descendants(filters: ConceptualNodeFilter, pagination: OffsetPaginationInput): [ConceptualNode!]!
+
+  """Returns a nested representation of the node's descendants"""
+  descendantsTree: JSON!
+  id: ID!
+  label: String!
+
+  """The sibling that immediately follows the node"""
+  nextSibling: ConceptualNode
+
+  """Parent of the node"""
+  parent: ConceptualNode
+
+  """The sibling that immediately precedes the node"""
+  previousSibling: ConceptualNode
+
+  """Siblings of the node"""
+  siblings(
+    """Include the node itself in the result"""
+    includeSelf: Boolean = false
+  ): [ConceptualNode!]!
+  tokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+  uri: String!
+}
+
+input ConceptualNodeFilter {
+  scriptureReferenceWithAncestors: ScriptureReferenceWithAncestorsInput
+  uri: StrFilterLookup
+  depth: Int
+  AND: ConceptualNodeFilter
+  OR: ConceptualNodeFilter
+  NOT: ConceptualNodeFilter
+  DISTINCT: Boolean
+}
+
+union CreateAnnotationFeaturePayload = AnnotationFeature | OperationInfo
+
+union CreateAnnotationPayload = Annotation | OperationInfo
+
+union CreateAnnotationSetPayload = AnnotationSet | OperationInfo
+
+type Deity {
+  altLabels: JSON!
+  data: JSON
+  description: String
+  id: ID!
+  instances(filters: DeityInstanceFilter, pagination: OffsetPaginationInput): [DeityInstance!]!
+  label: String
+
+  """Show localized data for a Deity"""
+  localized(fields: [String!] = null, languages: [String!] = null): JSON!
+  referredToAs(filters: DeityFilter, pagination: OffsetPaginationInput): [Deity!]!
+  refersTo: Deity
+  uri: String!
+}
+
+input DeityFilter {
+  uri: StrFilterLookup
+  label: StrFilterLookup
+  AND: DeityFilter
+  OR: DeityFilter
+  NOT: DeityFilter
+  DISTINCT: Boolean
+}
+
+type DeityInstance {
+  deity: Deity!
+  id: ID!
+  tokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+  uri: String!
+}
+
+input DeityInstanceFilter {
+  uri: StrFilterLookup
+  AND: DeityInstanceFilter
+  OR: DeityInstanceFilter
+  NOT: DeityInstanceFilter
+  DISTINCT: Boolean
+  scriptureReference: ScriptureReferenceInput
+}
+
+union DeleteAnnotationFeaturePayload = AnnotationFeature | OperationInfo
+
+union DeleteAnnotationPayload = Annotation | OperationInfo
+
+union DeleteAnnotationSetPayload = AnnotationSet | OperationInfo
+
+type Dictionary {
+  data: JSON!
+  id: ID!
+  label: String
+  uri: String!
+}
+
+type DictionaryEntry {
+  dictionary: Dictionary!
+  headword: String!
+  id: ID!
+  uri: String!
+
+  """XML content"""
+  xmlContent: String!
+}
+
+input DictionaryEntryFilter {
+  headword: StrFilterLookup
+  uri: StrFilterLookup
+  dictionary: DictionaryFilter
+  AND: DictionaryEntryFilter
+  OR: DictionaryEntryFilter
+  NOT: DictionaryEntryFilter
+  DISTINCT: Boolean
+}
+
+input DictionaryFilter {
+  label: StrFilterLookup
+  uri: StrFilterLookup
+  AND: DictionaryFilter
+  OR: DictionaryFilter
+  NOT: DictionaryFilter
+  DISTINCT: Boolean
+}
+
+type DjangoFileType {
+  name: String!
+  path: String!
+  size: Int!
+  url: String!
+}
+
+input DjangoModelUriFilterInput {
+  pk: Int
+  uri: StrFilterLookup
+}
+
+"""A scripture reference filter that requires an explicit textual edition"""
+input FullyQualifiedScriptureReferenceInput {
+  """
+  Supported inputs are currently: MAT, MAT 1, MAT 1-MAT 2, MAT 1:1, MAT 1:1-MAT 1:10
+  """
+  usfmRef: String!
+
+  """Textual Edition"""
+  textualEdition: String!
+}
+
+input IDBaseFilterLookup {
+  """Exact match. Filter will be skipped on `null` value"""
+  exact: ID
+
+  """Assignment test. Filter will be skipped on `null` value"""
+  isNull: Boolean
+
+  """
+  Exact match of items in a given list. Filter will be skipped on `null` value
+  """
+  inList: [ID!]
+}
+
+input IDFilterLookup {
+  """Exact match. Filter will be skipped on `null` value"""
+  exact: ID
+
+  """Assignment test. Filter will be skipped on `null` value"""
+  isNull: Boolean
+
+  """
+  Exact match of items in a given list. Filter will be skipped on `null` value
+  """
+  inList: [ID!]
+
+  """Case-insensitive exact match. Filter will be skipped on `null` value"""
+  iExact: ID
+
+  """
+  Case-sensitive containment test. Filter will be skipped on `null` value
+  """
+  contains: ID
+
+  """
+  Case-insensitive containment test. Filter will be skipped on `null` value
+  """
+  iContains: ID
+
+  """Case-sensitive starts-with. Filter will be skipped on `null` value"""
+  startsWith: ID
+
+  """Case-insensitive starts-with. Filter will be skipped on `null` value"""
+  iStartsWith: ID
+
+  """Case-sensitive ends-with. Filter will be skipped on `null` value"""
+  endsWith: ID
+
+  """Case-insensitive ends-with. Filter will be skipped on `null` value"""
+  iEndsWith: ID
+
+  """
+  Case-sensitive regular expression match. Filter will be skipped on `null` value
+  """
+  regex: ID
+
+  """
+  Case-insensitive regular expression match. Filter will be skipped on `null` value
+  """
+  iRegex: ID
+}
+
+input IntComparisonFilterLookup {
+  """Exact match. Filter will be skipped on `null` value"""
+  exact: Int
+
+  """Assignment test. Filter will be skipped on `null` value"""
+  isNull: Boolean
+
+  """
+  Exact match of items in a given list. Filter will be skipped on `null` value
+  """
+  inList: [Int!]
+
+  """Greater than. Filter will be skipped on `null` value"""
+  gt: Int
+
+  """Greater than or equal to. Filter will be skipped on `null` value"""
+  gte: Int
+
+  """Less than. Filter will be skipped on `null` value"""
+  lt: Int
+
+  """Less than or equal to. Filter will be skipped on `null` value"""
+  lte: Int
+
+  """Inclusive range test (between)"""
+  range: IntRangeLookup
+}
+
+input IntRangeLookup {
+  start: Int = null
+  end: Int = null
+}
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf).
+"""
+scalar JSON
+
+type KeyTerm {
+  data: JSON
+  description: String
+  id: ID!
+  instances(filters: KeyTermInstanceFilter, pagination: OffsetPaginationInput): [KeyTermInstance!]!
+  label: String
+  relatedTerms(filters: KeyTermFilter, pagination: OffsetPaginationInput): [KeyTerm!]!
+  uri: String!
+}
+
+input KeyTermFilter {
+  uri: StrFilterLookup
+  AND: KeyTermFilter
+  OR: KeyTermFilter
+  NOT: KeyTermFilter
+  DISTINCT: Boolean
+  scriptureReference: ScriptureReferenceInput
+}
+
+type KeyTermInstance {
+  id: ID!
+  keyTerm: KeyTerm!
+  tokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+  uri: String!
+}
+
+input KeyTermInstanceFilter {
+  uri: StrFilterLookup
+  AND: KeyTermInstanceFilter
+  OR: KeyTermInstanceFilter
+  NOT: KeyTermInstanceFilter
+  DISTINCT: Boolean
+  scriptureReference: ScriptureReferenceInput
+}
+
+union MoveAnnotationPayload = Annotation | OperationInfo
+
+input OffsetPaginationInput {
+  offset: Int! = 0
+  limit: Int! = -1
+}
+
+type OperationInfo {
+  """List of messages returned by the operation."""
+  messages: [OperationMessage!]!
+}
+
+type OperationMessage {
+  """The error code, or `null` if no error code was set."""
+  code: String
+
+  """
+  The field that caused the error, or `null` if it isn't associated with any particular field.
+  """
+  field: String
+
+  """The kind of this message."""
+  kind: OperationMessageKind!
+
+  """The error message."""
+  message: String!
+}
+
+enum OperationMessageKind {
+  ERROR
+  INFO
+  PERMISSION
+  VALIDATION
+  WARNING
+}
+
+enum Ordering {
+  ASC
+  ASC_NULLS_FIRST
+  ASC_NULLS_LAST
+  DESC
+  DESC_NULLS_FIRST
+  DESC_NULLS_LAST
+}
+
+type Passage {
+  depth: Int!
+  id: ID!
+  ref: String
+  textContent: String
+
+  """Textual Edition"""
+  textualEdition: TextualEdition!
+  tokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+  usfmRef: String!
+}
+
+input PassageFilter {
+  AND: PassageFilter
+  OR: PassageFilter
+  NOT: PassageFilter
+  DISTINCT: Boolean
+  scriptureReference: ScriptureReferenceInput
+}
+
+type Person {
+  altLabels: JSON!
+  data: JSON
+  description: String
+  id: ID!
+  instances(filters: PersonInstanceFilter, pagination: OffsetPaginationInput): [PersonInstance!]!
+  label: String
+
+  """Show localized data for a person"""
+  localized(fields: [String!] = null, languages: [String!] = null): JSON!
+  referredToAs(filters: PersonFilter, pagination: OffsetPaginationInput): [Person!]!
+  refersTo: Person
+  uri: String!
+}
+
+input PersonFilter {
+  uri: StrFilterLookup
+  label: StrFilterLookup
+  AND: PersonFilter
+  OR: PersonFilter
+  NOT: PersonFilter
+  DISTINCT: Boolean
+  scriptureReference: ScriptureReferenceInput
+}
+
+type PersonInstance {
+  id: ID!
+  place: Person!
+  tokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+  uri: String!
+}
+
+input PersonInstanceFilter {
+  AND: PersonInstanceFilter
+  OR: PersonInstanceFilter
+  NOT: PersonInstanceFilter
+  DISTINCT: Boolean
+}
+
+type Place {
+  altLabels: JSON!
+  data: JSON
+  description: String
+  id: ID!
+  instances(filters: PlaceInstanceFilter, pagination: OffsetPaginationInput): [PlaceInstance!]!
+  label: String
+
+  """Show localized data for a place"""
+  localized(fields: [String!] = null, languages: [String!] = null): JSON!
+  referredToAs(filters: PlaceFilter, pagination: OffsetPaginationInput): [Place!]!
+  refersTo: Place
+  uri: String!
+}
+
+input PlaceFilter {
+  uri: StrFilterLookup
+  label: StrFilterLookup
+  AND: PlaceFilter
+  OR: PlaceFilter
+  NOT: PlaceFilter
+  DISTINCT: Boolean
+  scriptureReference: ScriptureReferenceInput
+}
+
+type PlaceInstance {
+  id: ID!
+  place: Place!
+  tokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+  uri: String!
+}
+
+input PlaceInstanceFilter {
+  uri: StrFilterLookup
+  AND: PlaceInstanceFilter
+  OR: PlaceInstanceFilter
+  NOT: PlaceInstanceFilter
+  DISTINCT: Boolean
+  scriptureReference: ScriptureReferenceInput
+}
+
+input ResolveAncestors {
+  minDepth: Int! = 1
+}
+
+type ScriptureReference {
+  textualEdition: String
+  usfmRef: String!
+}
+
+input ScriptureReferenceInput {
+  """
+  Supported inputs are currently: MAT, MAT 1, MAT 1-MAT 2, MAT 1:1, MAT 1:1-MAT 1:10
+  """
+  usfmRef: String!
+
+  """
+  Textual Edition. If not specified, the default textual edition will be used.
+  """
+  textualEdition: String
+}
+
+input ScriptureReferenceWithAncestorsInput {
+  """
+  Supported inputs are currently: MAT, MAT 1, MAT 1-MAT 2, MAT 1:1, MAT 1:1-MAT 1:10
+  """
+  usfmRef: String!
+
+  """
+  Textual Edition. If not specified, the default textual edition will be used.
+  """
+  textualEdition: String
+  resolveAncestors: ResolveAncestors = null
+}
+
+type SiteMutation {
+  createAnnotation(
+    annotationFeatureUri: String!
+    label: String = null
+    linkedToUri: String = null
+    parentUri: String = null
+    sortTokens: Boolean
+    tokens: [ID!] = null
+
+    """
+    The URI to use for the annotation.  If not specified, a URI will be created by the backend.
+    """
+    uri: String
+  ): CreateAnnotationPayload!
+  createAnnotationFeature(
+    annotationSetUri: String!
+    label: String!
+
+    """
+    The URI to use for the annotation feature.  If not specified, a URI will be created by the backend.
+    """
+    uri: String
+  ): CreateAnnotationFeaturePayload!
+  createAnnotationSet(
+    label: String!
+
+    """
+    The URI to use for the annotation set.  If not specified, a URI will be created by the backend.
+    """
+    uri: String
+  ): CreateAnnotationSetPayload!
+  deleteAnnotation(id: ID!): DeleteAnnotationPayload!
+  deleteAnnotationFeature(id: ID!): DeleteAnnotationFeaturePayload!
+  deleteAnnotationSet(id: ID!): DeleteAnnotationSetPayload!
+  moveAnnotation(position: TreebeardPositions!, targetUri: String!, uri: String!): MoveAnnotationPayload!
+  updateAnnotation(annotationFeatureUri: String, id: ID!, label: String, sortTokens: Boolean, tokens: [ID!], uri: String): UpdateAnnotationPayload!
+  updateAnnotationFeature(id: ID!, label: String): UpdateAnnotationFeaturePayload!
+  updateAnnotationSet(id: ID!, label: String): UpdateAnnotationSetPayload!
+}
+
+type SiteQuery {
+  acaiRecords(filters: AcaiRecordFilter): [AcaiRecord!]!
+  alignmentLinks(filters: AlignmentLinkFilter, pagination: OffsetPaginationInput): [AlignmentLink!]!
+  alignments(pagination: OffsetPaginationInput): [Alignment!]!
+  annotationFeatures(filters: AnnotationFeatureFilter, pagination: OffsetPaginationInput): [AnnotationFeature!]!
+  annotationSets(filters: AnnotationSetFilter, pagination: OffsetPaginationInput): [AnnotationSet!]!
+  annotations(filters: AnnotationFilter, pagination: OffsetPaginationInput): [Annotation!]!
+  articleCollections(filters: ArticleCollectionFilter, pagination: OffsetPaginationInput): [ArticleCollection!]!
+  articles(filters: ArticleFilter, pagination: OffsetPaginationInput): [Article!]!
+  assets(filters: AssetFilter, pagination: OffsetPaginationInput): [Asset!]!
+  conceptualNodes(filters: ConceptualNodeFilter, pagination: OffsetPaginationInput): [ConceptualNode!]!
+  deities(filters: DeityFilter, pagination: OffsetPaginationInput): [Deity!]!
+  dictionaries(filters: DictionaryFilter, pagination: OffsetPaginationInput): [Dictionary!]!
+  dictionaryEntries(filters: DictionaryEntryFilter, pagination: OffsetPaginationInput): [DictionaryEntry!]!
+  keyTerms(filters: KeyTermFilter, pagination: OffsetPaginationInput): [KeyTerm!]!
+  paginatedWordTokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): WordTokenListPaginatedList!
+  passage(filters: PassageFilter, pagination: OffsetPaginationInput): [Passage!]!
+  people(filters: PersonFilter, pagination: OffsetPaginationInput): [Person!]!
+  places(filters: PlaceFilter, pagination: OffsetPaginationInput): [Place!]!
+  subjects(filters: SubjectFilter, pagination: OffsetPaginationInput): [Subject!]!
+  syntaxTrees(filters: SyntaxTreeFilters, pagination: SyntaxTreePagination): [SyntaxTree!]!
+  textualEditions(filters: TextualEditionFilter, order: TextualEditionOrder, pagination: OffsetPaginationInput): [TextualEdition!]!
+  textualNodes(filters: TextualNodeFilter, pagination: OffsetPaginationInput): [TextualNode!]!
+  wordTokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+}
+
+input StrFilterLookup {
+  """Exact match. Filter will be skipped on `null` value"""
+  exact: String
+
+  """Assignment test. Filter will be skipped on `null` value"""
+  isNull: Boolean
+
+  """
+  Exact match of items in a given list. Filter will be skipped on `null` value
+  """
+  inList: [String!]
+
+  """Case-insensitive exact match. Filter will be skipped on `null` value"""
+  iExact: String
+
+  """
+  Case-sensitive containment test. Filter will be skipped on `null` value
+  """
+  contains: String
+
+  """
+  Case-insensitive containment test. Filter will be skipped on `null` value
+  """
+  iContains: String
+
+  """Case-sensitive starts-with. Filter will be skipped on `null` value"""
+  startsWith: String
+
+  """Case-insensitive starts-with. Filter will be skipped on `null` value"""
+  iStartsWith: String
+
+  """Case-sensitive ends-with. Filter will be skipped on `null` value"""
+  endsWith: String
+
+  """Case-insensitive ends-with. Filter will be skipped on `null` value"""
+  iEndsWith: String
+
+  """
+  Case-sensitive regular expression match. Filter will be skipped on `null` value
+  """
+  regex: String
+
+  """
+  Case-insensitive regular expression match. Filter will be skipped on `null` value
+  """
+  iRegex: String
+}
+
+type Subject {
+  altLabels: JSON!
+  data: JSON
+  description: String
+  id: ID!
+  instances(filters: SubjectInstanceFilter, pagination: OffsetPaginationInput): [SubjectInstance!]!
+  label: String
+
+  """Show localized data for a subject"""
+  localized(fields: [String!] = null, languages: [String!] = null): JSON!
+  relatedSubjects(filters: SubjectFilter, pagination: OffsetPaginationInput): [Subject!]!
+  uri: String!
+}
+
+input SubjectFilter {
+  uri: StrFilterLookup
+  label: StrFilterLookup
+  AND: SubjectFilter
+  OR: SubjectFilter
+  NOT: SubjectFilter
+  DISTINCT: Boolean
+  scriptureReference: ScriptureReferenceInput
+}
+
+type SubjectInstance {
+  id: ID!
+  subject: Subject!
+  tokens(filters: WordTokenFilter, pagination: OffsetPaginationInput): [WordToken!]!
+  uri: String!
+}
+
+input SubjectInstanceFilter {
+  uri: StrFilterLookup
+  AND: SubjectInstanceFilter
+  OR: SubjectInstanceFilter
+  NOT: SubjectInstanceFilter
+  DISTINCT: Boolean
+  scriptureReference: ScriptureReferenceInput
+}
+
+type SyntaxTree {
+  data: String!
+  lang: String!
+  matches: [String!]!
+  xmlId: String!
+}
+
+input SyntaxTreeFilters {
+  xquery: String
+  reference: String
+  textualEdition: String
+  xmlId: String
+  scriptureReference: ScriptureReferenceInput
+}
+
+input SyntaxTreePagination {
+  limit: Int
+  offset: Int
+}
+
+type TextualEdition {
+  id: ID!
+  targetAlignments(pagination: OffsetPaginationInput): [Alignment!]!
+  usfmRef: String!
+}
+
+"""Filters for textual editions"""
+input TextualEditionFilter {
+  usfmRef: StrFilterLookup
+  AND: TextualEditionFilter
+  OR: TextualEditionFilter
+  NOT: TextualEditionFilter
+  DISTINCT: Boolean
+  isAlignedTranslation: Boolean
+}
+
+input TextualEditionOrder {
+  usfmRef: Ordering
+}
+
+type TextualNode {
+  """Ancestors of the node"""
+  ancestors(
+    """Filter ancestors by depth"""
+    depth: IntComparisonFilterLookup
+
+    """Include the node itself in the result"""
+    includeSelf: Boolean = false
+  ): [TextualNode!]!
+
+  """Children of the node"""
+  children(filters: TextualNodeFilter, pagination: OffsetPaginationInput): [TextualNode!]!
+
+  """Descendants of the node"""
+  descendants(filters: TextualNodeFilter, pagination: OffsetPaginationInput): [TextualNode!]!
+
+  """Returns a nested representation of the passage's descendants"""
+  descendantsTree: JSON!
+  id: ID!
+
+  """The sibling that immediately follows the node"""
+  nextSibling: TextualNode
+
+  """Parent of the node"""
+  parent: TextualNode
+
+  """The sibling that immediately precedes the node"""
+  previousSibling: TextualNode
+
+  """Siblings of the node"""
+  siblings(
+    """Include the node itself in the result"""
+    includeSelf: Boolean = false
+  ): [TextualNode!]!
+  usfmRef: String!
+
+  """XML content"""
+  xmlContent: String!
+}
+
+"""Filters for textual nodes"""
+input TextualNodeFilter {
+  usfmRef: StrFilterLookup
+  depth: IntComparisonFilterLookup
+  AND: TextualNodeFilter
+  OR: TextualNodeFilter
+  NOT: TextualNodeFilter
+  DISTINCT: Boolean
+  textualEdition: StrFilterLookup
+  scriptureReference: ScriptureReferenceInput
+}
+
+enum TreebeardPositions {
+  FIRST_CHILD
+  FIRST_SIBLING
+  LAST_CHILD
+  LAST_SIBLING
+  LEFT
+  RIGHT
+  SORTED_CHILD
+  SORTED_SIBLING
+}
+
+union UpdateAnnotationFeaturePayload = AnnotationFeature | OperationInfo
+
+union UpdateAnnotationPayload = Annotation | OperationInfo
+
+union UpdateAnnotationSetPayload = AnnotationSet | OperationInfo
+
+type WordToken implements WordTokenInterface {
+  annotationInstances(filters: AnnotationFilter, pagination: OffsetPaginationInput): [Annotation!]!
+  articles(filters: ArticleFilter, pagination: OffsetPaginationInput): [Article!]!
+  audioRanges: [AudioRange!]!
+  concepts(filters: ConceptualNodeFilter, pagination: OffsetPaginationInput): [ConceptualNode!]!
+
+  """Contains data from lowfat TSVs"""
+  data: JSON!
+  deities(filters: DeityFilter, pagination: OffsetPaginationInput): [Deity!]!
+  deityInstances(filters: DeityInstanceFilter, pagination: OffsetPaginationInput): [DeityInstance!]!
+  id: ID!
+
+  """0-based index (within the verse)"""
+  idx: Int!
+  keyTermInstances(filters: KeyTermInstanceFilter, pagination: OffsetPaginationInput): [KeyTermInstance!]!
+  keyTerms(filters: KeyTermFilter, pagination: OffsetPaginationInput): [KeyTerm!]!
+
+  """The form of a word as it appears at the head of a dictionary entry"""
+  lemma: String
+
+  """A 11-digit unique id in the format nBBCCCVVVWWW"""
+  maculaId: String!
+  people(filters: PersonFilter, pagination: OffsetPaginationInput): [Person!]!
+  personInstances(filters: PersonInstanceFilter, pagination: OffsetPaginationInput): [PersonInstance!]!
+  placeInstances(filters: PlaceInstanceFilter, pagination: OffsetPaginationInput): [PlaceInstance!]!
+  places(filters: PlaceFilter, pagination: OffsetPaginationInput): [Place!]!
+
+  """The USFM reference to a token"""
+  ref: String!
+
+  """used to reconstitute surface text from tokens."""
+  skipSpaceAfter: Boolean!
+  subjectInstances(filters: SubjectInstanceFilter, pagination: OffsetPaginationInput): [SubjectInstance!]!
+  subjects(filters: SubjectFilter, pagination: OffsetPaginationInput): [Subject!]!
+
+  """Textual Edition"""
+  textualEdition: TextualEdition!
+
+  """The tokenized value of a text part (usually whitespace separated)"""
+  value: String!
+  verse: Passage!
+
+  """The normalized version of the value (no punctuation)"""
+  wordValue: String!
+
+  """An 11-digit unique id in the format nBBCCCVVVWWW"""
+  xmlId: String!
+}
+
+input WordTokenFilter {
+  id: IDBaseFilterLookup
+  AND: WordTokenFilter
+  OR: WordTokenFilter
+  NOT: WordTokenFilter
+  DISTINCT: Boolean
+
+  """
+  The @ln attribute contains the number of an entry in Louw & Nida, Johannes P. Louw and Eugene Albert Nida, Greek-English Lexicon of the New Testament Based on Semantic Domains (New York United Bible Societies, 1996)
+  """
+  ln: String
+
+  """
+  The value of a @ref attribute you will recognize as a USFM identifier, with a bang (“!”) extension that gives the number of a word in a verse, reading from left to right. This makes lowfat trees addressable down to the word level of the text, for reference or combining with other resources.
+  """
+  ref: String
+
+  """
+  The @case attribute has five values accusative, dative, genitive, nominative, vocative.
+  """
+  case: String
+
+  """
+  The @mood attribute has one of six values imperative, indicative, infinitive, optative, participle, subjective.
+  """
+  mood: String
+
+  """"""
+  role: String
+
+  """"""
+  text: String
+
+  """
+  The @type attribute distinguishes different types of nouns and pronouns. When present, it has one of the following values, adverbial, common, demonstrative, indefinite, interrogative, personal, possessive, proper, or relative.
+  """
+  type: String
+
+  """
+  The @after attribute captures whitespace or punctuation following a word.
+  """
+  after: String
+
+  """
+  The @class attribute has the following values:
+  
+  adj (adjective)
+  
+  adv (adverb)
+  
+  conj (conjunction)
+  
+  det (determiner)
+  
+  intj (interjection)
+  
+  noun
+  
+  num (numeral)
+  
+  prep (preposition)
+  
+  pron (pronoun)
+  
+  ptcl (particle)
+  
+  verb
+  """
+  class: String
+
+  """
+  The @frame attribute adds semantic information on predicate arguments as inspired by the original PropBank project (http//propbank.github.io). The attribute value consists of xml:ids of agents (A0), agents of induced actions (AA), patients (A1), and recipients (A2), for verbs. When multiple xml:ids appear for any value, they are separated by the “;” (semi-colon) character.
+  """
+  frame: String
+
+  """
+  The @gloss attribute contains a short English translation of a word in the given context. Glosses are drawn from the Berean Interlinear Bible.
+  """
+  gloss: String
+
+  """
+  The @lemma attribute contains the form of a word as it appears at the head of a dictionary entry.
+  """
+  lemma: String
+
+  """
+  The @morph attribute has a morphological parsing of the word on which it appears. Parsings are represented in Robinson’s Morphological Analysis Codes. (http//www.modernliteralversion.org/bibles/bs2/RMAC/RMACindex.html)
+  """
+  morph: String
+
+  """
+  The @tense attribute when present has one of these values aorist, future, imperfect, perfect, pluperfect, and present.
+  """
+  tense: String
+
+  """
+  The @voice attribute has one of the following values active, middle, middlepassive, or passive.
+  """
+  voice: String
+
+  """The @degree attribute has two values, comparative and superlative."""
+  degree: String
+
+  """
+  The @domain attribute contains semantic domain identifiers drawn from the Semantic Dictionary of Biblical Greek. The numbering of these domains differ from the same domains specified by Louw & Nida.
+  """
+  domain: String
+
+  """
+  The @gender attribute has the values of masculine, feminine, and neuter.
+  """
+  gender: String
+
+  """The @number attribute has the values of plural or singular."""
+  number: String
+
+  """The @person attribute has the values first, second, or third."""
+  person: String
+
+  """
+  The @strong attribute captures a Strong’s reference number. (Strong, James (1890), The Exhaustive Concordance of the Bible, Cincinnati Jennings & Graham.)
+  """
+  strong: String
+
+  """
+  An 11-digit unique id in the format nBBCCCVVVWWW, where
+  
+  
+  
+  n => a prefix to make the number a valid xml:id
+  
+  
+  
+  BB => zero-padded book, NT starts at 40
+  
+  CCC => zero-padded chapter
+  
+  
+  
+  VVV => zero-padded verse
+  
+  
+  
+  WWW => zero-padded word index (for the word instance within the verse)
+  """
+  xmlId: String
+
+  """
+  The @subjref attribute has one or more xml:id values pointing to other <w> elements. This reference is to the nearest noun referent that serves as the implied subject of a verb.
+  """
+  subjref: String
+
+  """
+  The @referent attribute has one or more xml:id values pointing to other <w> elements. The xml:ids of <w> elements have an n followed by an 11 digit number. See /w/@xml:id. This reference is to the nearest noun referent of a pronoun.
+  """
+  referent: String
+
+  """
+  The @normalized attribute contains a word subject to these changes
+  
+  a) Punctuation has been removed.
+  
+  b) Most accents due to throwback clitics have been eliminated.
+  
+  c) Any final grave accent has been made acute when not eliminated by (b).
+  
+  Note that process (b) is not perfect. It only normalizes words which have more than one accent. A consequence of this is that clitics such as MOU will not get the accent removed even when the accent is present (e.g., due to a throwback clitic that follows it)....
+  
+  Ulrik Petersen https//github.com/biblicalhumanities/Nestle1904/tree/master/morph
+  """
+  normalized: String
+  scriptureReference: ScriptureReferenceInput
+}
+
+interface WordTokenInterface {
+  annotationInstances(filters: AnnotationFilter, pagination: OffsetPaginationInput): [Annotation!]!
+  articles(filters: ArticleFilter, pagination: OffsetPaginationInput): [Article!]!
+  audioRanges: [AudioRange!]!
+  concepts(filters: ConceptualNodeFilter, pagination: OffsetPaginationInput): [ConceptualNode!]!
+
+  """Contains data from lowfat TSVs"""
+  data: JSON!
+  deities(filters: DeityFilter, pagination: OffsetPaginationInput): [Deity!]!
+  deityInstances(filters: DeityInstanceFilter, pagination: OffsetPaginationInput): [DeityInstance!]!
+  id: ID!
+
+  """0-based index (within the verse)"""
+  idx: Int!
+  keyTermInstances(filters: KeyTermInstanceFilter, pagination: OffsetPaginationInput): [KeyTermInstance!]!
+  keyTerms(filters: KeyTermFilter, pagination: OffsetPaginationInput): [KeyTerm!]!
+
+  """The form of a word as it appears at the head of a dictionary entry"""
+  lemma: String
+
+  """A 11-digit unique id in the format nBBCCCVVVWWW"""
+  maculaId: String!
+  people(filters: PersonFilter, pagination: OffsetPaginationInput): [Person!]!
+  personInstances(filters: PersonInstanceFilter, pagination: OffsetPaginationInput): [PersonInstance!]!
+  placeInstances(filters: PlaceInstanceFilter, pagination: OffsetPaginationInput): [PlaceInstance!]!
+  places(filters: PlaceFilter, pagination: OffsetPaginationInput): [Place!]!
+
+  """The USFM reference to a token"""
+  ref: String!
+
+  """used to reconstitute surface text from tokens."""
+  skipSpaceAfter: Boolean!
+  subjectInstances(filters: SubjectInstanceFilter, pagination: OffsetPaginationInput): [SubjectInstance!]!
+  subjects(filters: SubjectFilter, pagination: OffsetPaginationInput): [Subject!]!
+
+  """Textual Edition"""
+  textualEdition: TextualEdition!
+
+  """The tokenized value of a text part (usually whitespace separated)"""
+  value: String!
+  verse: Passage!
+
+  """The normalized version of the value (no punctuation)"""
+  wordValue: String!
+
+  """An 11-digit unique id in the format nBBCCCVVVWWW"""
+  xmlId: String!
+}
+
+type WordTokenListPaginatedList {
+  results: [WordToken!]!
+  totalCount: Int
+}
