@@ -36,7 +36,7 @@ export async function sendQuery(usfmRef: string): Promise<AcaiRecord[]> {
     if (data.acaiRecords && data.acaiRecords.length > 0) {
       return data.acaiRecords;
     } else {
-      throw new Error("No ACAI records found");
+      throw new Error("No ACAI records found.");
     }
   } catch (error) {
     console.error("Error querying ATLAS:", error);

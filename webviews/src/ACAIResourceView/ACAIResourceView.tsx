@@ -23,6 +23,7 @@ const ACAIResourceView: React.FC = () => {
   const [searchResult, setSearchResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedResult, setExpandedResult] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     console.log("ACAIResourceView component mounted");
@@ -39,11 +40,13 @@ const ACAIResourceView: React.FC = () => {
           console.log("Received search result:", message.result);
           setSearchResult(message.result);
           setError(null);
+          setIsLoading(false);
           break;
         case "searchError":
           console.error("Search error:", message.error);
           setError(message.error);
           setSearchResult(null);
+          setIsLoading(false);
           break;
       }
     };
@@ -86,6 +89,9 @@ const ACAIResourceView: React.FC = () => {
         bookId: selectedBook.id,
         verseRef: textInput,
       });
+      setIsLoading(true);
+      setSearchResult(null);
+      setError(null);
       vscode.postMessage({
         command: "search",
         bookId: selectedBook.id,
@@ -100,6 +106,13 @@ const ACAIResourceView: React.FC = () => {
     setExpandedResult(expandedResult === id ? null : id);
   };
 
+  const renderDescription = (description: string) => {
+    const paragraphs = description.split("</p>").filter((p) => p.trim() !== "");
+    return paragraphs.map((paragraph, index) => (
+      <p key={index} dangerouslySetInnerHTML={{ __html: paragraph + "</p>" }} />
+    ));
+  };
+
   console.log("Selected option:", selectedOption);
 
   return (
@@ -107,33 +120,40 @@ const ACAIResourceView: React.FC = () => {
       <h1>ACAI Resources</h1>
       <div className="select-container">
         <label htmlFor="option-select">
-          Select a verse reference or range:
+          Select a book and specify a verse reference:
         </label>
-        <div className="input-container">
-          <select
-            id="option-select"
-            value={selectedOption}
-            onChange={handleSelectChange}
-          >
-            <option value="">Choose a book</option>
-            {options.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            className="text-input"
-            value={textInput}
-            onChange={handleTextInputChange}
-            placeholder="verse ref."
-          />
-          <button className="search-button" onClick={handleSearch}>
-            Search
-          </button>
+        <div className="input-wrapper">
+          <div className="input-container">
+            <select
+              id="option-select"
+              value={selectedOption}
+              onChange={handleSelectChange}
+            >
+              <option value="">Choose a book</option>
+              {options.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              className="text-input"
+              value={textInput}
+              onChange={handleTextInputChange}
+              placeholder="verse ref."
+            />
+            <button
+              className="search-button"
+              onClick={handleSearch}
+              disabled={isLoading}
+            >
+              {isLoading ? "Searching..." : "Search"}
+            </button>
+          </div>
         </div>
       </div>
+      {isLoading && <div className="loading-spinner"></div>}
       {error && <div className="error-message">{error}</div>}
       {searchResult && (
         <div className="search-result">
@@ -149,15 +169,18 @@ const ACAIResourceView: React.FC = () => {
                 </div>
                 {expandedResult === result.id && (
                   <div className="result-details">
-                    <p>
-                      <strong>Description:</strong> {result.description}
-                    </p>
-                    <p>
-                      <strong>Record Type:</strong> {result.recordType}
-                    </p>
-                    <p>
-                      <strong>URI:</strong> {result.uri}
-                    </p>
+                    <h3 className="result-details-label">{result.label}</h3>
+                    <div className="result-description">
+                      {renderDescription(result.description)}
+                    </div>
+                    <div className="result-info">
+                      <p>
+                        <strong>Record Type:</strong> {result.recordType}
+                      </p>
+                      <p>
+                        <strong>URI:</strong> {result.uri}
+                      </p>
+                    </div>
                   </div>
                 )}
               </li>
