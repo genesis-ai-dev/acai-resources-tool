@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./ACAIResourceView.css";
 import { AcaiRecord } from "../../../types";
+import { VSCodeButton, VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react";
 
 enum RecordTypes {
   PERSON = "PERSON",
@@ -21,6 +22,8 @@ interface ACAIResourceViewState {
   isLoading: boolean;
   expandedResult: string | null;
   expandedGroups: RecordTypes[];
+  isFilterExpanded: boolean;
+  selectedTypes: RecordTypes[];
 }
 
 const initialState: ACAIResourceViewState = {
@@ -31,6 +34,8 @@ const initialState: ACAIResourceViewState = {
   isLoading: false,
   expandedResult: null,
   expandedGroups: Object.values(RecordTypes),
+  isFilterExpanded: false,
+  selectedTypes: Object.values(RecordTypes),
 };
 
 declare global {
@@ -56,12 +61,28 @@ const ACAIResourceView: React.FC = () => {
     initialState.expandedGroups
   );
   const [options, setOptions] = useState<BookData[]>([]);
+  const [isFilterExpanded, setIsFilterExpanded] = useState(
+    initialState.isFilterExpanded
+  );
+  const [selectedTypes, setSelectedTypes] = useState<RecordTypes[]>(
+    initialState.selectedTypes
+  );
 
   const sendStateUpdate = (state: Partial<ACAIResourceViewState>) => {
     vscode.postMessage({
       command: "updateState",
       state: state,
     });
+  };
+
+  const handleTypeChange = (type: RecordTypes) => {
+    const newSelectedTypes = selectedTypes.includes(type)
+      ? selectedTypes.filter((t) => t !== type)
+      : [...selectedTypes, type];
+
+    setSelectedTypes(newSelectedTypes);
+
+    sendStateUpdate({ selectedTypes: newSelectedTypes });
   };
 
   useEffect(() => {
@@ -102,6 +123,10 @@ const ACAIResourceView: React.FC = () => {
             console.log("Setting search results:", message.searchResult);
             setSearchResult(message.searchResult);
             setError(null);
+          }
+          if (message.selectedTypes) {
+            console.log("Setting selected types:", message.selectedTypes);
+            setSelectedTypes(message.selectedTypes);
           }
           break;
       }
@@ -163,6 +188,7 @@ const ACAIResourceView: React.FC = () => {
       console.log("Initiating search:", {
         bookId: selectedBook.id,
         verseRef: textInput,
+        types: selectedTypes,
       });
       setIsLoading(true);
       setSearchResult(null);
@@ -171,6 +197,7 @@ const ACAIResourceView: React.FC = () => {
         command: "search",
         bookId: selectedBook.id,
         verseRef: textInput,
+        types: selectedTypes,
       });
     } else {
       console.warn("Search attempted without selecting a book");
@@ -271,6 +298,13 @@ const ACAIResourceView: React.FC = () => {
         </label>
         <div className="input-wrapper">
           <div className="input-container">
+            <VSCodeButton
+              appearance="icon"
+              aria-label="Filter"
+              onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+            >
+              <i className="codicon codicon-filter"></i>
+            </VSCodeButton>
             <select
               id="option-select"
               value={selectedOption}
@@ -298,6 +332,23 @@ const ACAIResourceView: React.FC = () => {
               {isLoading ? "Searching..." : "Search"}
             </button>
           </div>
+          {isFilterExpanded && (
+            <div className="filter-box">
+              <h3 className="filter-header">Filter</h3>
+              <h4 className="filter-subheader">By Type:</h4>
+              <div className="checkbox-group">
+                {Object.values(RecordTypes).map((type) => (
+                  <VSCodeCheckbox
+                    key={type}
+                    checked={selectedTypes.includes(type)}
+                    onChange={() => handleTypeChange(type)}
+                  >
+                    {type.charAt(0) + type.slice(1).toLowerCase()}
+                  </VSCodeCheckbox>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       {isLoading && <div className="loading-spinner"></div>}

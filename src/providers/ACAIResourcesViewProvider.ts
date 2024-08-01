@@ -9,6 +9,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     selectedOption?: string;
     textInput?: string;
     searchResult?: AcaiRecord[];
+    selectedTypes?: string[];
   } = {};
 
   constructor(
@@ -30,7 +31,20 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
       localResourceRoots: [this._extensionUri],
     };
 
-    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+    const codiconsUri = webviewView.webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        this._extensionUri,
+        "node_modules",
+        "@vscode/codicons",
+        "dist",
+        "codicon.css"
+      )
+    );
+
+    webviewView.webview.html = this._getHtmlForWebview(
+      webviewView.webview,
+      codiconsUri
+    );
 
     // Get book data and send it to the webview
     const bookData = this.getBookData();
@@ -48,6 +62,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
         selectedOption: this.state.selectedOption,
         textInput: this.state.textInput,
         searchResult: this.state.searchResult,
+        selectedTypes: this.state.selectedTypes,
       });
     }
 
@@ -81,6 +96,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
             selectedOption: this.state.selectedOption,
             textInput: this.state.textInput,
             searchResult: this.state.searchResult,
+            selectedTypes: this.state.selectedTypes,
           });
           return;
         case "search":
@@ -98,6 +114,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
             selectedOption: this.state.selectedOption,
             textInput: this.state.textInput,
             searchResult: this.state.searchResult,
+            selectedTypes: this.state.selectedTypes,
           });
           return;
       }
@@ -129,11 +146,16 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
   ) {
     console.log(`Handling search for book ${bookId}, verse ${verseRef}`);
     try {
-      const result: AcaiRecord[] = await queryATLAS(bookId, verseRef);
+      const result: AcaiRecord[] = await queryATLAS(
+        bookId,
+        verseRef,
+        this.state.selectedTypes || []
+      );
       console.log("Search completed successfully");
 
       // Save state
       this.state = {
+        ...this.state,
         selectedOption: bookId,
         textInput: verseRef,
         searchResult: result,
@@ -162,7 +184,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     this._context.globalState.update("acaiResourcesState", this.state);
   }
 
-  private _getHtmlForWebview(webview: vscode.Webview) {
+  private _getHtmlForWebview(webview: vscode.Webview, codiconsUri: vscode.Uri) {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(
         this._extensionUri,
@@ -188,6 +210,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <link href="${styleUri}" rel="stylesheet">
+                <link href="${codiconsUri}" rel="stylesheet">
                 <title>ACAI Resources</title>
             </head>
             <body>

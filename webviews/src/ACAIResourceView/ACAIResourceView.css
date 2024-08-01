@@ -30,9 +30,66 @@ label {
   align-items: center;
 }
 
+/* Update these styles for the input container and button */
+.input-container vscode-button {
+  margin-right: 10px;
+  margin-bottom: 10px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 2px;
+}
+
+.input-container vscode-button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.input-container vscode-button i {
+  font-size: 16px;
+}
+
+.filter-box {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+}
+
+.filter-header {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: var(--vscode-foreground);
+}
+
+.filter-subheader {
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: var(--vscode-foreground);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkbox-group vscode-checkbox {
+  margin-bottom: 4px;
+}
+
+/* Adjust the select style to align with the button */
 select {
   flex: 1;
-  min-width: 150px;
+  min-width: 120px;
   margin-right: 10px;
   margin-bottom: 10px;
   padding: 8px 12px;
@@ -78,6 +135,7 @@ select option {
   outline: 1px solid var(--vscode-focusBorder);
 }
 
+/* Adjust other input styles to match */
 .text-input {
   width: 120px;
   padding: 8px;

@@ -6,9 +6,14 @@ const client = new ApolloClient({
   cache: new InMemoryCache(),
 });
 
-export async function sendQuery(usfmRef: string): Promise<AcaiRecord[]> {
+export async function sendQuery(
+  usfmRef: string,
+  selectedTypes: string[]
+): Promise<AcaiRecord[]> {
   try {
-    console.log(`Querying ATLAS for USFM reference: ${usfmRef}`);
+    console.log(
+      `Querying ATLAS for USFM reference: ${usfmRef}, types: ${selectedTypes}`
+    );
 
     const query = gql`
       query ACAIRecordsInPassage($acaiRecordsFilters: AcaiRecordFilter) {
@@ -29,6 +34,7 @@ export async function sendQuery(usfmRef: string): Promise<AcaiRecord[]> {
           scriptureReference: {
             usfmRef,
           },
+          recordTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
         },
       },
     });
@@ -72,9 +78,12 @@ function formatVerseRef(bookId: string, verseRef: string): string {
 
 export async function queryATLAS(
   bookId: string,
-  verseRef: string
+  verseRef: string,
+  selectedTypes: string[]
 ): Promise<any> {
   const usfmRef = formatVerseRef(bookId, verseRef);
-  console.log(`Querying ATLAS for combined reference: ${usfmRef}`);
-  return sendQuery(usfmRef);
+  console.log(
+    `Querying ATLAS for combined reference: ${usfmRef}, types: ${selectedTypes}`
+  );
+  return sendQuery(usfmRef, selectedTypes);
 }
