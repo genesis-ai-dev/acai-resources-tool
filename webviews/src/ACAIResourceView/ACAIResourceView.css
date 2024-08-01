@@ -19,17 +19,79 @@ label {
   color: var(--vscode-input-foreground);
 }
 
-.input-container {
-  display: flex;
-  align-items: center;
+.input-wrapper {
   margin-left: 20px;
-  margin-right: 10px;
+  margin-right: 20px;
 }
 
+.input-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Update these styles for the input container and button */
+.input-container vscode-button {
+  margin-right: 10px;
+  margin-bottom: 10px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 2px;
+}
+
+.input-container vscode-button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.input-container vscode-button i {
+  font-size: 16px;
+}
+
+.filter-box {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+}
+
+.filter-header {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: var(--vscode-foreground);
+}
+
+.filter-subheader {
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: var(--vscode-foreground);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkbox-group vscode-checkbox {
+  margin-bottom: 4px;
+}
+
+/* Adjust the select style to align with the button */
 select {
   flex: 1;
-  width: auto;
-  margin-right: 10px; /* Changed from 0 to 10px */
+  min-width: 120px;
+  margin-right: 10px;
+  margin-bottom: 10px;
   padding: 8px 12px;
   border: 1px solid var(--vscode-dropdown-border);
   border-radius: 2px;
@@ -73,10 +135,12 @@ select option {
   outline: 1px solid var(--vscode-focusBorder);
 }
 
+/* Adjust other input styles to match */
 .text-input {
   width: 120px;
   padding: 8px;
   margin-right: 10px;
+  margin-bottom: 10px;
   border: 1px solid var(--vscode-dropdown-border);
   border-radius: 2px;
   background-color: var(--vscode-input-background);
@@ -90,8 +154,25 @@ select option {
   outline: 1px solid var(--vscode-focusBorder);
 }
 
+.search-button {
+  padding: 8px 16px;
+  margin-right: 0;
+  margin-bottom: 10px;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+.search-button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
 h1 {
-  font-size: 1.5em;
+  font-size: 1.8em;
   margin-bottom: 16px;
   margin-left: 20px; /* Add left margin */
   margin-right: 20px; /* Add right margin */
@@ -142,8 +223,8 @@ button:hover {
 }
 
 .search-result h2 {
-  font-size: 1.2em;
-  margin-bottom: 8px;
+  font-size: 1.5em;
+  margin-bottom: 12px;
   color: var(--vscode-editor-foreground);
 }
 
@@ -173,6 +254,7 @@ button:hover {
 .search-button {
   padding: 8px 16px;
   margin-right: 10px;
+  margin-bottom: 10px;
   background-color: var(--vscode-button-background);
   color: var(--vscode-button-foreground);
   border: none;
@@ -199,9 +281,10 @@ button:hover {
 
 .result-label {
   cursor: pointer;
-  padding: 8px;
+  padding: 10px;
   background-color: var(--vscode-editor-inactiveSelectionBackground);
   border-radius: 4px;
+  font-size: 1.1em;
 }
 
 .result-label:hover {
@@ -210,12 +293,102 @@ button:hover {
 
 .result-details {
   margin-top: 8px;
-  padding: 8px;
+  padding: 16px;
   background-color: var(--vscode-editor-background);
   border: 1px solid var(--vscode-panel-border);
   border-radius: 4px;
+  font-size: 1.05em;
 }
 
-.result-details p {
-  margin: 4px 0;
+.result-details-label {
+  font-size: 1.3em;
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: var(--vscode-editor-foreground);
+}
+
+.result-description {
+  margin-bottom: 16px;
+}
+
+.result-description p {
+  margin: 10px 0;
+}
+
+.result-info p {
+  margin: 5px 0;
+}
+
+.result-group {
+  margin-bottom: 20px;
+}
+
+.result-group-title {
+  font-size: 1.2em;
+  margin-bottom: 10px;
+  color: var(--vscode-editor-foreground);
+  border-bottom: 1px solid var(--vscode-panel-border);
+  padding-bottom: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.result-group-title::before {
+  content: 'v';
+  display: inline-block;
+  margin-right: 5px;
+  font-size: 0.8em;
+  transition: transform 0.3s ease;
+  position: relative;
+  top: -3px;
+}
+
+.result-group-title:not(.expanded)::before {
+  transform: rotate(-90deg);
+  top: -1px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--vscode-editor-foreground);
+  border-top: 4px solid var(--vscode-button-background);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.search-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-message {
+  margin-left: 20px;
+  color: var(--vscode-errorForeground);
+  margin-bottom: 16px;
+}
+
+@media (max-width: 400px) {
+  .input-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  select, .search-button {
+    width: calc(100%);
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .text-input {
+    width: calc(100% - 18px);
+    margin-right: 0;
+    margin-left: 0;
+  }
 }

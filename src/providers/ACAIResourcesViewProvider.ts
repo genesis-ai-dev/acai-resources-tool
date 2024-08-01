@@ -5,9 +5,19 @@ import { AcaiRecord } from "../../types";
 
 export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "acai-resources-sidebar";
+  private state: {
+    selectedOption?: string;
+    textInput?: string;
+    searchResult?: AcaiRecord[];
+    selectedTypes?: string[];
+  } = {};
 
-  constructor(private readonly _extensionUri: vscode.Uri) {
+  constructor(
+    private readonly _extensionUri: vscode.Uri,
+    private readonly _context: vscode.ExtensionContext
+  ) {
     console.log("ACAIResourcesViewProvider initialized");
+    this.state = this._context.globalState.get("acaiResourcesState") || {};
   }
 
   public resolveWebviewView(
@@ -21,7 +31,20 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
       localResourceRoots: [this._extensionUri],
     };
 
-    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+    const codiconsUri = webviewView.webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        this._extensionUri,
+        "node_modules",
+        "@vscode/codicons",
+        "dist",
+        "codicon.css"
+      )
+    );
+
+    webviewView.webview.html = this._getHtmlForWebview(
+      webviewView.webview,
+      codiconsUri
+    );
 
     // Get book data and send it to the webview
     const bookData = this.getBookData();
@@ -31,7 +54,30 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
       bookData: bookData,
     });
 
-    console.log("Message posted to webview");
+    // Restore state if available
+    if (this.state.selectedOption && this.state.textInput) {
+      console.log("Restoring state:", this.state);
+      webviewView.webview.postMessage({
+        command: "restoreState",
+        selectedOption: this.state.selectedOption,
+        textInput: this.state.textInput,
+        searchResult: this.state.searchResult,
+        selectedTypes: this.state.selectedTypes,
+      });
+    }
+
+    // Add listeners for webview visibility changes
+    webviewView.onDidChangeVisibility(() => {
+      if (!webviewView.visible) {
+        console.log("Webview is being hidden, saving state");
+        this.saveState();
+      }
+    });
+
+    webviewView.onDidDispose(() => {
+      console.log("Webview is being disposed, saving state");
+      this.saveState();
+    });
 
     // Add message listener
     webviewView.webview.onDidReceiveMessage((message) => {
@@ -44,18 +90,41 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
             command: "setBookData",
             bookData: bookData,
           });
+          // Also send the current state
+          webviewView.webview.postMessage({
+            command: "restoreState",
+            selectedOption: this.state.selectedOption,
+            textInput: this.state.textInput,
+            searchResult: this.state.searchResult,
+            selectedTypes: this.state.selectedTypes,
+          });
           return;
         case "search":
           this.handleSearch(message.bookId, message.verseRef, webviewView);
           return;
+        case "updateState":
+          // Add this case to handle state updates from the webview
+          this.state = { ...this.state, ...message.state };
+          this.saveState();
+          return;
+        case "requestStateRestore":
+          console.log("Received requestStateRestore, sending current state");
+          webviewView.webview.postMessage({
+            command: "restoreState",
+            selectedOption: this.state.selectedOption,
+            textInput: this.state.textInput,
+            searchResult: this.state.searchResult,
+            selectedTypes: this.state.selectedTypes,
+          });
+          return;
       }
     });
   }
+
   private getBookData() {
     console.log("Fetching book data");
     const bookData = Object.entries(vrefData)
       .map(([id, book]) => {
-        console.log(`Processing book: ${id} - ${book.name}`);
         return { id, name: book.name };
       })
       .sort((a, b) => {
@@ -77,8 +146,22 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
   ) {
     console.log(`Handling search for book ${bookId}, verse ${verseRef}`);
     try {
-      const result: AcaiRecord[] = await queryATLAS(bookId, verseRef);
+      const result: AcaiRecord[] = await queryATLAS(
+        bookId,
+        verseRef,
+        this.state.selectedTypes || []
+      );
       console.log("Search completed successfully");
+
+      // Save state
+      this.state = {
+        ...this.state,
+        selectedOption: bookId,
+        textInput: verseRef,
+        searchResult: result,
+      };
+      this.saveState();
+
       webviewView.webview.postMessage({
         command: "searchResult",
         result: result,
@@ -96,8 +179,12 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private _getHtmlForWebview(webview: vscode.Webview) {
-    console.log("Generating HTML for webview");
+  private saveState() {
+    console.log("Saving state:", this.state);
+    this._context.globalState.update("acaiResourcesState", this.state);
+  }
+
+  private _getHtmlForWebview(webview: vscode.Webview, codiconsUri: vscode.Uri) {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(
         this._extensionUri,
@@ -123,6 +210,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <link href="${styleUri}" rel="stylesheet">
+                <link href="${codiconsUri}" rel="stylesheet">
                 <title>ACAI Resources</title>
             </head>
             <body>
