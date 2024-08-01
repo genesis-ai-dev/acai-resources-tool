@@ -36,10 +36,13 @@ const extensionConfig = {
     rules: [
       {
         test: /\.ts$/,
-        exclude: /node_modules/,
+        exclude: [/node_modules/, /webviews/], // Add /webviews/ to exclude
         use: [
           {
             loader: "ts-loader",
+            options: {
+              configFile: path.resolve(__dirname, "tsconfig.json"),
+            },
           },
         ],
       },
@@ -65,4 +68,5 @@ const extensionConfig = {
     level: "log", // enables logging required for problem matchers
   },
 };
+
 module.exports = [extensionConfig];

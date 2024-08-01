@@ -2,12 +2,11 @@
   "name": "acai-resources-tool-webviews",
   "private": true,
   "version": "0.0.1",
-  "type": "module",
   "scripts": {
-    "dev": "pnpm run vite",
+    "dev": "vite",
     "build:ACAIResourceView": "cross-env APP_NAME=ACAIResourceView vite build",
     "build:all": "pnpm run build:ACAIResourceView",
-    "watch": "nodemon --watch src --ext ts,tsx --exec \"pnpm run build:all\"",
+    "watch": "vite build --watch",
     "lint": "pnpm run eslint -- . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "pnpm run vite preview"
   },
@@ -32,7 +31,6 @@
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
-    "nodemon": "^3.0.2",
     "typescript": "^5.2.2",
     "vite": "^5.0.8"
   }

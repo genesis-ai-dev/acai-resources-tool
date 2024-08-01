@@ -65,17 +65,14 @@
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
-    "compile": "pnpm run webpack",
-    "watch": "concurrently \"pnpm run webpack-watch\" \"pnpm run watch-webviews\"",
-    "webpack-watch": "webpack --config ./webpack.config.js --watch",
-    "watch-webviews": "cd webviews && pnpm run watch",
-    "package": "pnpm run webpack -- --mode production --devtool hidden-source-map",
+    "compile": "webpack",
+    "watch": "concurrently \"webpack --watch\" \"cd webviews && pnpm run watch\"",
+    "package": "webpack --mode production --devtool hidden-source-map && cd webviews && pnpm run build:all",
     "compile-tests": "pnpm run tsc -- -p . --outDir out",
     "watch-tests": "pnpm run tsc -- -p . -w --outDir out",
     "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
     "lint": "pnpm run eslint -- src --ext ts",
-    "test": "node ./out/test/runTest.js",
-    "webpack": "webpack --config ./webpack.config.js"
+    "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.3",
@@ -84,6 +81,9 @@
     "@typescript-eslint/eslint-plugin": "^6.9.0",
     "@typescript-eslint/parser": "^6.9.0",
     "@vscode/test-electron": "^2.3.6",
+    "@apollo/client": "^3.7.17",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "concurrently": "^8.2.0",
     "eslint": "^8.52.0",
     "glob": "^10.3.10",
@@ -91,9 +91,13 @@
     "ts-loader": "^9.5.0",
     "typescript": "^5.2.2",
     "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "style-loader": "^3.3.3",
+    "css-loader": "^6.8.1"
   },
   "dependencies": {
-    "@vscode/codicons": "^0.0.35"
+    "@vscode/codicons": "^0.0.35",
+    "@apollo/client": "^3.8.8",
+    "graphql": "^16.8.1"
   }
 }

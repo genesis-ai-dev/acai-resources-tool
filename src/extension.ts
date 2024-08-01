@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ACAIResourcesViewProvider } from "./providers/ACAIResourcesViewProvider/ACAIResourcesViewProvider";
+import { ACAIResourcesViewProvider } from "./providers/ACAIResourcesViewProvider";
 
 export function activate(context: vscode.ExtensionContext) {
   const provider = new ACAIResourcesViewProvider(context.extensionUri);
