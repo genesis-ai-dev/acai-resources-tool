@@ -1,0 +1,12 @@
+out
+dist
+node_modules
+.vscode-test/
+*.vsix
+/.vscode
+/comments.json
+/pnpm-lock.yaml
+/src/.DS_Store
+.DS_Store
+package-lock.json
+.pnpm-store/

@@ -1,0 +1,20 @@
+# Ignore everything
+*
+*/**
+
+# Allowlist what we need
+!dist/**
+
+
+!webviews/dist/**
+
+!src/media/**
+!src/assets/reset.css
+!src/assets/vscode.css
+!**/*.svg
+!node_modules/@vscode/codicons/dist/**
+
+!CHANGELOG.md
+!LICENSE
+!package*.json
+!README.md

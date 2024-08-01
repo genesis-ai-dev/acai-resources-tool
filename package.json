@@ -1,0 +1,103 @@
+{
+  "name": "acai-resources-tool",
+  "displayName": "ACAI Resources Tool",
+  "description": "An extension to help users manage ACAI resources.",
+  "author": {
+    "name": "BiblioNexus Foundation"
+  },
+  "version": "0.0.1",
+  "publisher": "project-accelarate",
+  "homepage": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "acai-resources",
+          "title": "ACAI Resources",
+          "icon": "./media/container_icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "acai-resources": [
+        {
+          "type": "webview",
+          "id": "acai-resources-sidebar",
+          "name": "ACAI Resources",
+          "icon": "$(symbol-library)",
+          "contextualTitle": "ACAI Resources"
+        }
+      ]
+    },
+    "commands": [
+      
+    ],
+    "configuration": {
+      "title": "ACAI Resources Tool",
+      "properties": {
+        "acai-resources-tool.resourcesDirectory": {
+          "type": "string",
+          "default": "",
+          "description": "Directory to store ACAI resources"
+        },
+        "acai-resources-tool.defaultLanguage": {
+          "type": "string",
+          "default": "en",
+          "description": "Default language for resources"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run package",
+    "compile": "webpack",
+    "watch": "concurrently \"webpack --watch\" \"cd webviews && pnpm run watch\"",
+    "package": "webpack --mode production --devtool hidden-source-map && cd webviews && pnpm run build:all",
+    "compile-tests": "pnpm run tsc -- -p . --outDir out",
+    "watch-tests": "pnpm run tsc -- -p . -w --outDir out",
+    "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
+    "lint": "pnpm run eslint -- src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.3",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.70.0",
+    "@typescript-eslint/eslint-plugin": "^6.9.0",
+    "@typescript-eslint/parser": "^6.9.0",
+    "@vscode/test-electron": "^2.3.6",
+    "@apollo/client": "^3.7.17",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.52.0",
+    "glob": "^10.3.10",
+    "mocha": "^10.2.0",
+    "ts-loader": "^9.5.0",
+    "typescript": "^5.2.2",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4",
+    "style-loader": "^3.3.3",
+    "css-loader": "^6.8.1"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.35",
+    "@apollo/client": "^3.8.8",
+    "graphql": "^16.8.1"
+  }
+}
