@@ -48,8 +48,8 @@ function formatVerseRef(bookId: string, verseRef: string): string {
   const parts = verseRef.split("-");
 
   if (parts.length === 1) {
-    // Single verse or chapter:verse
-    return `${bookId} ${verseRef}`;
+    // Single verse or chapter:verse or book only
+    return `${bookId} ${verseRef}`.trim();
   } else if (parts.length === 2) {
     const [start, end] = parts;
 
