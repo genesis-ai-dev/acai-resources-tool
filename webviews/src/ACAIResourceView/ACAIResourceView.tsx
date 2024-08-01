@@ -1,6 +1,37 @@
 import React, { useState, useEffect } from "react";
 import "./ACAIResourceView.css";
-import { AcaiRecord } from "../../../src/types/index";
+import { AcaiRecord } from "../../../types";
+
+enum RecordTypes {
+  PERSON = "PERSON",
+  PLACE = "PLACE",
+  DEITY = "DEITY",
+}
+
+interface BookData {
+  id: string;
+  name: string;
+}
+
+interface ACAIResourceViewState {
+  selectedOption: string;
+  textInput: string;
+  searchResult: AcaiRecord[] | null;
+  error: string | null;
+  isLoading: boolean;
+  expandedResult: string | null;
+  expandedGroups: RecordTypes[];
+}
+
+const initialState: ACAIResourceViewState = {
+  selectedOption: "",
+  textInput: "",
+  searchResult: null,
+  error: null,
+  isLoading: false,
+  expandedResult: null,
+  expandedGroups: Object.values(RecordTypes),
+};
 
 declare global {
   interface Window {
@@ -10,20 +41,28 @@ declare global {
 
 const vscode = window.acquireVsCodeApi();
 
-interface BookData {
-  id: string;
-  name: string;
-}
-
 const ACAIResourceView: React.FC = () => {
-  console.log("Rendering ACAIResourceView component");
-  const [selectedOption, setSelectedOption] = useState("");
+  const [selectedOption, setSelectedOption] = useState(
+    initialState.selectedOption
+  );
+  const [textInput, setTextInput] = useState(initialState.textInput);
+  const [searchResult, setSearchResult] = useState(initialState.searchResult);
+  const [error, setError] = useState(initialState.error);
+  const [isLoading, setIsLoading] = useState(initialState.isLoading);
+  const [expandedResult, setExpandedResult] = useState(
+    initialState.expandedResult
+  );
+  const [expandedGroups, setExpandedGroups] = useState(
+    initialState.expandedGroups
+  );
   const [options, setOptions] = useState<BookData[]>([]);
-  const [textInput, setTextInput] = useState("");
-  const [searchResult, setSearchResult] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [expandedResult, setExpandedResult] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+
+  const sendStateUpdate = (state: Partial<ACAIResourceViewState>) => {
+    vscode.postMessage({
+      command: "updateState",
+      state: state,
+    });
+  };
 
   useEffect(() => {
     console.log("ACAIResourceView component mounted");
@@ -41,6 +80,7 @@ const ACAIResourceView: React.FC = () => {
           setSearchResult(message.result);
           setError(null);
           setIsLoading(false);
+          sendStateUpdate({ searchResult: message.result });
           break;
         case "searchError":
           console.error("Search error:", message.error);
@@ -48,13 +88,28 @@ const ACAIResourceView: React.FC = () => {
           setSearchResult(null);
           setIsLoading(false);
           break;
+        case "restoreState":
+          console.log("Restoring state:", message);
+          if (message.selectedOption) {
+            console.log("Setting selected option:", message.selectedOption);
+            setSelectedOption(message.selectedOption);
+          }
+          if (message.textInput) {
+            console.log("Setting text input:", message.textInput);
+            setTextInput(message.textInput);
+          }
+          if (message.searchResult) {
+            console.log("Setting search results:", message.searchResult);
+            setSearchResult(message.searchResult);
+            setError(null);
+          }
+          break;
       }
     };
 
     window.addEventListener("message", messageListener);
     console.log("Message event listener added to window");
 
-    // Send a message to the extension to request initial data
     vscode.postMessage({ command: "requestInitialData" });
     console.log("Sent requestInitialData message to extension");
 
@@ -64,10 +119,29 @@ const ACAIResourceView: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (options.length > 0 && selectedOption === "") {
+      vscode.postMessage({ command: "requestStateRestore" });
+    }
+  }, [options, selectedOption]);
+
+  useEffect(() => {
+    console.log("Current state:", { selectedOption, textInput, searchResult });
+    if (selectedOption && textInput && searchResult) {
+      console.log("State restored:", {
+        selectedOption,
+        textInput,
+        searchResult,
+      });
+      // You can add any additional logic here that needs to run when the state is restored
+    }
+  }, [selectedOption, textInput, searchResult]);
+
   const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newValue = event.target.value;
     console.log("Book selection changed:", newValue);
     setSelectedOption(newValue);
+    sendStateUpdate({ selectedOption: newValue });
   };
 
   const handleTextInputChange = (
@@ -77,6 +151,7 @@ const ACAIResourceView: React.FC = () => {
     if (/^[0-9:\s-]*$/.test(value)) {
       console.log("Verse reference input changed:", value);
       setTextInput(value);
+      sendStateUpdate({ textInput: value });
     } else {
       console.warn("Invalid verse reference input:", value);
     }
@@ -106,6 +181,12 @@ const ACAIResourceView: React.FC = () => {
     setExpandedResult(expandedResult === id ? null : id);
   };
 
+  const toggleGroup = (type: RecordTypes) => {
+    setExpandedGroups((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
+
   const renderDescription = (description: string) => {
     const paragraphs = description.split("</p>").filter((p) => p.trim() !== "");
     return paragraphs.map((paragraph, index) => (
@@ -113,7 +194,73 @@ const ACAIResourceView: React.FC = () => {
     ));
   };
 
-  console.log("Selected option:", selectedOption);
+  const groupResultsByType = (results: AcaiRecord[]) => {
+    const grouped: { [key in RecordTypes]: AcaiRecord[] } = {
+      [RecordTypes.PERSON]: [],
+      [RecordTypes.PLACE]: [],
+      [RecordTypes.DEITY]: [],
+    };
+
+    results.forEach((result) => {
+      const types = result.recordType
+        .split(",")
+        .map((type) => type.trim().toUpperCase());
+      types.forEach((type) => {
+        if (type in RecordTypes) {
+          grouped[type as RecordTypes].push(result);
+        }
+      });
+    });
+
+    return grouped;
+  };
+
+  const renderResultGroup = (type: RecordTypes, results: AcaiRecord[]) => {
+    if (results.length === 0) return null;
+
+    const isExpanded = expandedGroups.includes(type);
+
+    return (
+      <div key={type} className="result-group">
+        <h3
+          className={`result-group-title ${isExpanded ? "expanded" : ""}`}
+          onClick={() => toggleGroup(type)}
+        >
+          {type} ({results.length})
+        </h3>
+        {isExpanded && (
+          <ul className="result-list">
+            {results.map((result: AcaiRecord) => (
+              <li key={result.id} className="result-item">
+                <div
+                  className="result-label"
+                  onClick={() => handleResultClick(result.id)}
+                >
+                  {result.label}
+                </div>
+                {expandedResult === result.id && (
+                  <div className="result-details">
+                    <h3 className="result-details-label">{result.label}</h3>
+                    <div className="result-description">
+                      {renderDescription(result.description)}
+                    </div>
+                    <div className="result-info">
+                      <p>
+                        <strong>Record Type:</strong> {result.recordType}
+                      </p>
+                      <p>
+                        <strong>URI:</strong> {result.uri}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="acai-resource-view">
@@ -158,39 +305,13 @@ const ACAIResourceView: React.FC = () => {
       {searchResult && (
         <div className="search-result">
           <h2>Search Result</h2>
-          <ul className="result-list">
-            {searchResult.map((result: AcaiRecord) => (
-              <li key={result.id} className="result-item">
-                <div
-                  className="result-label"
-                  onClick={() => handleResultClick(result.id)}
-                >
-                  {result.label}
-                </div>
-                {expandedResult === result.id && (
-                  <div className="result-details">
-                    <h3 className="result-details-label">{result.label}</h3>
-                    <div className="result-description">
-                      {renderDescription(result.description)}
-                    </div>
-                    <div className="result-info">
-                      <p>
-                        <strong>Record Type:</strong> {result.recordType}
-                      </p>
-                      <p>
-                        <strong>URI:</strong> {result.uri}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
+          {Object.entries(groupResultsByType(searchResult)).map(
+            ([type, results]) => renderResultGroup(type as RecordTypes, results)
+          )}
         </div>
       )}
     </div>
   );
 };
 
-console.log("ACAIResourceView component defined");
 export default ACAIResourceView;

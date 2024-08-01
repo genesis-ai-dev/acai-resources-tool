@@ -261,6 +261,35 @@ button:hover {
   margin: 5px 0;
 }
 
+.result-group {
+  margin-bottom: 20px;
+}
+
+.result-group-title {
+  font-size: 1.2em;
+  margin-bottom: 10px;
+  color: var(--vscode-editor-foreground);
+  border-bottom: 1px solid var(--vscode-panel-border);
+  padding-bottom: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.result-group-title::before {
+  content: 'v';
+  display: inline-block;
+  margin-right: 5px;
+  font-size: 0.8em;
+  transition: transform 0.3s ease;
+  position: relative;
+  top: -3px;
+}
+
+.result-group-title:not(.expanded)::before {
+  transform: rotate(-90deg);
+  top: -1px;
+}
+
 .loading-spinner {
   width: 40px;
   height: 40px;
