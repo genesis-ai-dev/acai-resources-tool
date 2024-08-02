@@ -412,7 +412,7 @@ const ACAIResourceView: React.FC = () => {
           value={topLevelLabelInput}
           onChange={handleTopLevelLabelInputChange}
           placeholder="Enter label"
-          title="Enter a label or partial lable (e.g. 'Judah', 'el', 'Lord')"
+          title="Enter a label or partial label (e.g. 'Judah', 'el', 'Lord')"
         />
       );
     }
