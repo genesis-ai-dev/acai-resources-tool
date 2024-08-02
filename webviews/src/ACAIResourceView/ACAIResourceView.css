@@ -4,7 +4,7 @@ body {
   color: var(--vscode-foreground);
   background-color: var(--vscode-editor-background);
   padding: 20px;
-  margin: 0 0px; /* Add horizontal margins */
+  margin: 0 0px;
 }
 
 .select-container {
@@ -14,8 +14,8 @@ body {
 label {
   display: block;
   margin-bottom: 8px;
-  margin-left: 20px; /* Add left margin */
-  margin-right: 20px; /* Add right margin */
+  margin-left: 20px;
+  margin-right: 20px;
   color: var(--vscode-input-foreground);
 }
 
@@ -28,12 +28,11 @@ label {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: 10px;
 }
 
-/* Update these styles for the input container and button */
 .input-container vscode-button {
-  margin-right: 10px;
-  margin-bottom: 10px;
+  flex: 0 0 auto;
   width: 32px;
   height: 32px;
   padding: 0;
@@ -62,36 +61,28 @@ label {
   border-radius: 4px;
 }
 
-.filter-header {
-  font-size: 14px;
-  font-weight: bold;
-  margin-bottom: 8px;
-  color: var(--vscode-foreground);
-}
-
 .filter-subheader {
   font-size: 12px;
   font-weight: bold;
   margin-bottom: 6px;
   color: var(--vscode-foreground);
+  margin-top: 10px; 
 }
 
 .checkbox-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: 10px;
 }
 
 .checkbox-group vscode-checkbox {
   margin-bottom: 4px;
 }
 
-/* Adjust the select style to align with the button */
 select {
   flex: 1;
   min-width: 120px;
-  margin-right: 10px;
-  margin-bottom: 10px;
   padding: 8px 12px;
   border: 1px solid var(--vscode-dropdown-border);
   border-radius: 2px;
@@ -117,30 +108,10 @@ select option {
   color: var(--vscode-dropdown-foreground);
 }
 
-.number-input {
-  width: 60px;
-  padding: 8px;
-  margin-left: 10px;
-  margin-right: 10px;
-  border: 1px solid var(--vscode-dropdown-border);
-  border-radius: 2px;
-  background-color: var(--vscode-input-background);
-  color: var(--vscode-input-foreground);
-  font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size);
-}
-
-.number-input:focus {
-  border-color: var(--vscode-focusBorder);
-  outline: 1px solid var(--vscode-focusBorder);
-}
-
-/* Adjust other input styles to match */
 .text-input {
-  width: 120px;
-  padding: 8px;
-  margin-right: 10px;
-  margin-bottom: 10px;
+  flex: 1 1;
+  min-width: 80px;
+  padding: 8px 12px;
   border: 1px solid var(--vscode-dropdown-border);
   border-radius: 2px;
   background-color: var(--vscode-input-background);
@@ -155,9 +126,8 @@ select option {
 }
 
 .search-button {
+  flex: 0 0 auto;
   padding: 8px 16px;
-  margin-right: 0;
-  margin-bottom: 10px;
   background-color: var(--vscode-button-background);
   color: var(--vscode-button-foreground);
   border: none;
@@ -174,45 +144,9 @@ select option {
 h1 {
   font-size: 1.8em;
   margin-bottom: 16px;
-  margin-left: 20px; /* Add left margin */
-  margin-right: 20px; /* Add right margin */
+  margin-left: 20px;
+  margin-right: 20px;
   color: var(--vscode-foreground);
-}
-
-p {
-  margin-bottom: 8px;
-  margin-left: 20px; /* Add left margin */
-  margin-right: 20px; /* Add right margin */
-}
-
-.selected-option {
-  margin-top: 20px;
-  margin-left: 20px; /* Add left margin */
-  margin-right: 20px; /* Add right margin */
-  padding: 12px;
-  background-color: var(--vscode-editor-inactiveSelectionBackground);
-  border-radius: 4px;
-}
-
-.selected-option h2 {
-  font-size: 1.2em;
-  margin-bottom: 8px;
-  color: var(--vscode-editor-foreground);
-}
-
-button {
-  padding: 8px 16px;
-  background-color: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
-  border: none;
-  border-radius: 2px;
-  cursor: pointer;
-  font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size);
-}
-
-button:hover {
-  background-color: var(--vscode-button-hoverBackground);
 }
 
 .search-result {
@@ -228,47 +162,6 @@ button:hover {
   color: var(--vscode-editor-foreground);
 }
 
-/* New styles for passage data */
-.passage-data {
-  margin-bottom: 20px;
-  padding: 10px;
-  background-color: var(--vscode-editor-background);
-  border: 1px solid var(--vscode-panel-border);
-  border-radius: 4px;
-}
-
-.token-data {
-  margin-bottom: 10px;
-  padding-left: 10px;
-  border-left: 2px solid var(--vscode-textLink-foreground);
-}
-
-.token-data ul {
-  padding-left: 20px;
-}
-
-.token-data li {
-  margin-bottom: 5px;
-}
-
-.search-button {
-  padding: 8px 16px;
-  margin-right: 10px;
-  margin-bottom: 10px;
-  background-color: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
-  border: none;
-  border-radius: 2px;
-  cursor: pointer;
-  font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size);
-}
-
-.search-button:hover {
-  background-color: var(--vscode-button-hoverBackground);
-}
-
-/* New styles for result list */
 .result-list {
   list-style-type: none;
   padding: 0;
@@ -376,19 +269,109 @@ button:hover {
 
 @media (max-width: 400px) {
   .input-container {
-    flex-direction: column;
-    align-items: stretch;
+    flex-wrap: wrap;
   }
 
-  select, .search-button {
-    width: calc(100%);
-    margin-right: 0;
-    margin-left: 0;
+  .input-container vscode-button {
+    flex: 0 0 auto;
   }
 
-  .text-input {
-    width: calc(100% - 18px);
-    margin-right: 0;
-    margin-left: 0;
+  select,
+  .text-input,
+  .search-button {
+    flex: 1 1 auto;
+    min-width: 0;
   }
+
+  .text-input.full-width {
+    flex-basis: calc(100% - 90px);
+  }
+
+  select {
+    flex-basis: calc(50% - 15px);
+  }
+
+  .search-button {
+    flex-basis: auto;
+  }
+}
+
+.filter-box vscode-dropdown {
+  width: 100%;
+  height: 28px;
+  margin-bottom: 8px;
+}
+
+.search-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.search-input-container vscode-dropdown,
+.search-input-container vscode-text-field {
+  width: 100%;
+  height: 28px;
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 0;
+  align-items: center;
+}
+
+.filter-row.filter-row-gap {
+  margin-top: 0px; /* This creates the vertical gap */
+}
+
+.filter-row vscode-dropdown,
+.filter-row vscode-text-field {
+  flex: 1;
+}
+
+.filter-box vscode-dropdown,
+.filter-box vscode-text-field,
+.filter-box vscode-button {
+  height: 28px;
+  box-sizing: border-box;
+}
+
+.filter-box vscode-dropdown::part(control),
+.filter-box vscode-text-field::part(control) {
+  height: 28px;
+  padding: 0 6px;
+  margin-bottom: 0;
+}
+
+.filter-box vscode-button {
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0;
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 0;
+  align-items: center;
+}
+
+.filter-row vscode-dropdown,
+.filter-row vscode-text-field {
+  flex: 1;
+}
+
+.filter-row vscode-button {
+  flex: 0 0 auto;
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
 }

@@ -1,12 +1,40 @@
 import React, { useState, useEffect } from "react";
 import "./ACAIResourceView.css";
 import { AcaiRecord } from "../../../types";
-import { VSCodeButton, VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react";
+import {
+  provideVSCodeDesignSystem,
+  vsCodeButton,
+  vsCodeCheckbox,
+  vsCodeDropdown,
+  vsCodeOption,
+  vsCodeTextField,
+} from "@vscode/webview-ui-toolkit";
+import {
+  VSCodeButton,
+  VSCodeCheckbox,
+  VSCodeDropdown,
+  VSCodeOption,
+  VSCodeTextField,
+} from "@vscode/webview-ui-toolkit/react";
+
+// Ensure the VS Code design system is provided
+provideVSCodeDesignSystem().register(
+  vsCodeButton(),
+  vsCodeCheckbox(),
+  vsCodeDropdown(),
+  vsCodeOption(),
+  vsCodeTextField()
+);
 
 enum RecordTypes {
   PERSON = "PERSON",
   PLACE = "PLACE",
   DEITY = "DEITY",
+}
+
+enum SearchType {
+  REFERENCE = "Reference",
+  LABEL = "Label",
 }
 
 interface BookData {
@@ -24,6 +52,9 @@ interface ACAIResourceViewState {
   expandedGroups: RecordTypes[];
   isFilterExpanded: boolean;
   selectedTypes: RecordTypes[];
+  searchType: SearchType;
+  labelInput: string;
+  topLevelLabelInput: string;
 }
 
 const initialState: ACAIResourceViewState = {
@@ -36,6 +67,9 @@ const initialState: ACAIResourceViewState = {
   expandedGroups: Object.values(RecordTypes),
   isFilterExpanded: false,
   selectedTypes: Object.values(RecordTypes),
+  searchType: SearchType.REFERENCE,
+  labelInput: "",
+  topLevelLabelInput: "",
 };
 
 declare global {
@@ -67,6 +101,13 @@ const ACAIResourceView: React.FC = () => {
   const [selectedTypes, setSelectedTypes] = useState<RecordTypes[]>(
     initialState.selectedTypes
   );
+  const [searchType, setSearchType] = useState<SearchType>(
+    initialState.searchType
+  );
+  const [labelInput, setLabelInput] = useState(initialState.labelInput);
+  const [topLevelLabelInput, setTopLevelLabelInput] = useState(
+    initialState.topLevelLabelInput
+  );
 
   const sendStateUpdate = (state: Partial<ACAIResourceViewState>) => {
     vscode.postMessage({
@@ -85,61 +126,85 @@ const ACAIResourceView: React.FC = () => {
     sendStateUpdate({ selectedTypes: newSelectedTypes });
   };
 
-  useEffect(() => {
-    console.log("ACAIResourceView component mounted");
+  const handleSearchTypeChange = (event: Event) => {
+    const target = event.target as HTMLSelectElement;
+    const newSearchType = target.value as SearchType;
+    setSearchType(newSearchType);
+    setLabelInput("");
+    setTopLevelLabelInput("");
+    vscode.postMessage({
+      command: "updateState",
+      state: { searchType: newSearchType },
+    });
+  };
 
+  const handleLabelInputChange = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    setLabelInput(target.value);
+  };
+
+  const handleTopLevelLabelInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setTopLevelLabelInput(event.target.value);
+  };
+
+  const handleBookChange = (event: Event) => {
+    const target = event.target as HTMLSelectElement;
+    setSelectedOption(target.value);
+    sendStateUpdate({ selectedOption: target.value });
+  };
+
+  useEffect(() => {
     const messageListener = (event: MessageEvent) => {
       const message = event.data;
-      console.log("Received message in ACAIResourceView:", message);
       switch (message.command) {
         case "setBookData":
-          console.log("Received book data:", message.bookData);
           setOptions(message.bookData);
           break;
         case "searchResult":
-          console.log("Received search result:", message.result);
           setSearchResult(message.result);
           setError(null);
           setIsLoading(false);
           sendStateUpdate({ searchResult: message.result });
           break;
         case "searchError":
-          console.error("Search error:", message.error);
           setError(message.error);
           setSearchResult(null);
           setIsLoading(false);
           break;
         case "restoreState":
-          console.log("Restoring state:", message);
           if (message.selectedOption) {
-            console.log("Setting selected option:", message.selectedOption);
             setSelectedOption(message.selectedOption);
           }
           if (message.textInput) {
-            console.log("Setting text input:", message.textInput);
             setTextInput(message.textInput);
           }
           if (message.searchResult) {
-            console.log("Setting search results:", message.searchResult);
             setSearchResult(message.searchResult);
             setError(null);
           }
           if (message.selectedTypes) {
-            console.log("Setting selected types:", message.selectedTypes);
             setSelectedTypes(message.selectedTypes);
+          }
+          if (message.searchType) {
+            setSearchType(message.searchType);
+          }
+          if (message.labelInput) {
+            setLabelInput(message.labelInput);
+          }
+          if (message.topLevelLabelInput) {
+            setTopLevelLabelInput(message.topLevelLabelInput);
           }
           break;
       }
     };
 
     window.addEventListener("message", messageListener);
-    console.log("Message event listener added to window");
 
     vscode.postMessage({ command: "requestInitialData" });
-    console.log("Sent requestInitialData message to extension");
 
     return () => {
-      console.log("ACAIResourceView component unmounting");
       window.removeEventListener("message", messageListener);
     };
   }, []);
@@ -183,25 +248,42 @@ const ACAIResourceView: React.FC = () => {
   };
 
   const handleSearch = () => {
-    const selectedBook = options.find((option) => option.id === selectedOption);
-    if (selectedBook) {
-      console.log("Initiating search:", {
-        bookId: selectedBook.id,
-        verseRef: textInput,
-        types: selectedTypes,
-      });
-      setIsLoading(true);
-      setSearchResult(null);
-      setError(null);
-      vscode.postMessage({
-        command: "search",
-        bookId: selectedBook.id,
-        verseRef: textInput,
-        types: selectedTypes,
-      });
-    } else {
-      console.warn("Search attempted without selecting a book");
+    if (searchType === SearchType.REFERENCE) {
+      const selectedBook = options.find(
+        (option) => option.id === selectedOption
+      );
+      if (!selectedBook) {
+        setError("Please select a book for reference search.");
+        return;
+      }
+      if (!textInput) {
+        setError("Please enter a verse reference.");
+        return;
+      }
+    } else if (searchType === SearchType.LABEL) {
+      if (!topLevelLabelInput) {
+        setError("Please enter a label for label search.");
+        return;
+      }
     }
+
+    const searchData = {
+      bookId: searchType === SearchType.REFERENCE ? selectedOption : "",
+      verseRef: searchType === SearchType.REFERENCE ? textInput : "",
+      types: selectedTypes,
+      searchType: searchType,
+      labelInput:
+        searchType === SearchType.LABEL ? topLevelLabelInput : labelInput,
+    };
+
+    console.log("Initiating search:", searchData);
+    setIsLoading(true);
+    setSearchResult(null);
+    setError(null);
+    vscode.postMessage({
+      command: "search",
+      ...searchData,
+    });
   };
 
   const handleResultClick = (id: string) => {
@@ -289,53 +371,139 @@ const ACAIResourceView: React.FC = () => {
     );
   };
 
+  const getInstructionText = () => {
+    return searchType === SearchType.REFERENCE
+      ? "Select a book and specify a verse reference:"
+      : "Enter a label to search for:";
+  };
+
+  const renderTopLevelInputs = () => {
+    if (searchType === SearchType.REFERENCE) {
+      return (
+        <>
+          <select
+            id="option-select"
+            value={selectedOption}
+            onChange={handleSelectChange}
+            title="Select a book from the Bible"
+          >
+            <option value="">--</option>
+            {options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="text"
+            className="text-input"
+            value={textInput}
+            onChange={handleTextInputChange}
+            placeholder="verse ref."
+            title="Leave empty to search entire book; Enter a verse reference (e.g. 1:1, 1:1-5, 1:1-2:3)"
+          />
+        </>
+      );
+    } else {
+      return (
+        <input
+          type="text"
+          className="text-input full-width"
+          value={topLevelLabelInput}
+          onChange={handleTopLevelLabelInputChange}
+          placeholder="Enter label"
+          title="Enter a label or partial lable (e.g. 'Judah', 'el', 'Lord')"
+        />
+      );
+    }
+  };
+
+  const renderFilterBoxInputs = () => {
+    if (searchType === SearchType.REFERENCE) {
+      return (
+        <>
+          <h4 className="filter-subheader">Label Filter:</h4>
+          <div className="filter-row">
+            <VSCodeTextField
+              placeholder="Enter label"
+              value={labelInput}
+              onChange={handleLabelInputChange as any}
+            />
+          </div>
+        </>
+      );
+    } else {
+      return (
+        <>
+          <h4 className="filter-subheader">Reference Filter:</h4>
+          <div className="filter-row">
+            <VSCodeDropdown
+              value={selectedOption}
+              onChange={handleBookChange as any}
+            >
+              <VSCodeOption value="">--</VSCodeOption>
+              {options.map((option) => (
+                <VSCodeOption key={option.id} value={option.id}>
+                  {option.name}
+                </VSCodeOption>
+              ))}
+            </VSCodeDropdown>
+          </div>
+          <div className="filter-row filter-row-gap">
+            <VSCodeTextField
+              placeholder="verse ref."
+              value={textInput}
+              onChange={(e: any) => setTextInput(e.target.value)}
+            />
+          </div>
+        </>
+      );
+    }
+  };
+
   return (
     <div className="acai-resource-view">
       <h1>ACAI Resources</h1>
       <div className="select-container">
-        <label htmlFor="option-select">
-          Select a book and specify a verse reference:
-        </label>
+        <label htmlFor="option-select">{getInstructionText()}</label>
         <div className="input-wrapper">
           <div className="input-container">
             <VSCodeButton
               appearance="icon"
-              aria-label="Filter"
+              aria-label="Toggle filter options"
               onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+              title="Click to show or hide additional filter options"
             >
               <i className="codicon codicon-filter"></i>
             </VSCodeButton>
-            <select
-              id="option-select"
-              value={selectedOption}
-              onChange={handleSelectChange}
-            >
-              <option value="">Choose a book</option>
-              {options.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="text"
-              className="text-input"
-              value={textInput}
-              onChange={handleTextInputChange}
-              placeholder="verse ref."
-            />
+            {renderTopLevelInputs()}
             <button
               className="search-button"
               onClick={handleSearch}
               disabled={isLoading}
+              title="Click to search"
             >
               {isLoading ? "Searching..." : "Search"}
             </button>
           </div>
           {isFilterExpanded && (
             <div className="filter-box">
-              <h3 className="filter-header">Filter</h3>
-              <h4 className="filter-subheader">By Type:</h4>
+              <h4 className="filter-subheader">Search By:</h4>
+              <div className="search-input-container">
+                <VSCodeDropdown
+                  value={searchType}
+                  onChange={handleSearchTypeChange as any}
+                  title="Select the type of search to perform"
+                >
+                  {Object.values(SearchType).map((type) => (
+                    <VSCodeOption key={type} value={type}>
+                      {type}
+                    </VSCodeOption>
+                  ))}
+                </VSCodeDropdown>
+              </div>
+              {renderFilterBoxInputs()}
+              <h4 className="filter-subheader">Type Filter:</h4>
               <div className="checkbox-group">
                 {Object.values(RecordTypes).map((type) => (
                   <VSCodeCheckbox

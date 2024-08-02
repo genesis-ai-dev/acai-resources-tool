@@ -6,14 +6,9 @@ const client = new ApolloClient({
   cache: new InMemoryCache(),
 });
 
-export async function sendQuery(
-  usfmRef: string,
-  selectedTypes: string[]
-): Promise<AcaiRecord[]> {
+export async function sendRefQuery(filters: any): Promise<AcaiRecord[]> {
   try {
-    console.log(
-      `Querying ATLAS for USFM reference: ${usfmRef}, types: ${selectedTypes}`
-    );
+    console.log(`Querying ATLAS with filters:`, filters);
 
     const query = gql`
       query ACAIRecordsInPassage($acaiRecordsFilters: AcaiRecordFilter) {
@@ -30,12 +25,7 @@ export async function sendQuery(
     const { data } = await client.query({
       query,
       variables: {
-        acaiRecordsFilters: {
-          scriptureReference: {
-            usfmRef,
-          },
-          recordTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
-        },
+        acaiRecordsFilters: filters,
       },
     });
 
@@ -46,6 +36,40 @@ export async function sendQuery(
     }
   } catch (error) {
     console.error("Error querying ATLAS:", error);
+    throw error;
+  }
+}
+
+export async function sendLabelQuery(filters: any): Promise<AcaiRecord[]> {
+  try {
+    console.log(`Querying ATLAS with label filters:`, filters);
+
+    const query = gql`
+      query ACAIRecordsByLabel($acaiRecordsFilters: AcaiRecordFilter) {
+        acaiRecords(filters: $acaiRecordsFilters) {
+          id
+          label
+          description
+          recordType
+          uri
+        }
+      }
+    `;
+
+    const { data } = await client.query({
+      query,
+      variables: {
+        acaiRecordsFilters: filters,
+      },
+    });
+
+    if (data.acaiRecords && data.acaiRecords.length > 0) {
+      return data.acaiRecords;
+    } else {
+      throw new Error("No ACAI records found.");
+    }
+  } catch (error) {
+    console.error("Error querying ATLAS by label:", error);
     throw error;
   }
 }
@@ -79,11 +103,28 @@ function formatVerseRef(bookId: string, verseRef: string): string {
 export async function queryATLAS(
   bookId: string,
   verseRef: string,
-  selectedTypes: string[]
+  selectedTypes: string[],
+  labelInput: string,
+  searchType: string
 ): Promise<any> {
-  const usfmRef = formatVerseRef(bookId, verseRef);
-  console.log(
-    `Querying ATLAS for combined reference: ${usfmRef}, types: ${selectedTypes}`
-  );
-  return sendQuery(usfmRef, selectedTypes);
+  const filters: any = {
+    recordTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
+    label: labelInput ? { iContains: labelInput } : undefined,
+  };
+
+  if (searchType === "Reference") {
+    const usfmRef = formatVerseRef(bookId, verseRef);
+    console.log(
+      `Querying ATLAS for combined reference: ${usfmRef}, types: ${selectedTypes}, label input: ${labelInput}, search type: ${searchType}`
+    );
+    filters.scriptureReference = { usfmRef };
+    return sendRefQuery(filters);
+  } else if (searchType === "Label") {
+    console.log(
+      `Querying ATLAS by label: ${labelInput}, types: ${selectedTypes}, search type: ${searchType}`
+    );
+    return sendLabelQuery(filters);
+  } else {
+    throw new Error("Invalid search type");
+  }
 }
