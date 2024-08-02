@@ -8,6 +8,7 @@ import {
   vsCodeDropdown,
   vsCodeOption,
   vsCodeTextField,
+  vsCodeLink,
 } from "@vscode/webview-ui-toolkit";
 import {
   VSCodeButton,
@@ -15,6 +16,7 @@ import {
   VSCodeDropdown,
   VSCodeOption,
   VSCodeTextField,
+  VSCodeLink,
 } from "@vscode/webview-ui-toolkit/react";
 
 // Ensure the VS Code design system is provided
@@ -23,7 +25,8 @@ provideVSCodeDesignSystem().register(
   vsCodeCheckbox(),
   vsCodeDropdown(),
   vsCodeOption(),
-  vsCodeTextField()
+  vsCodeTextField(),
+  vsCodeLink()
 );
 
 enum RecordTypes {
@@ -108,6 +111,7 @@ const ACAIResourceView: React.FC = () => {
   const [topLevelLabelInput, setTopLevelLabelInput] = useState(
     initialState.topLevelLabelInput
   );
+  const [searchId, setSearchId] = useState<string | null>(null);
 
   const sendStateUpdate = (state: Partial<ACAIResourceViewState>) => {
     vscode.postMessage({
@@ -256,16 +260,19 @@ const ACAIResourceView: React.FC = () => {
         setError("Please select a book for reference search.");
         return;
       }
-      if (!textInput) {
-        setError("Please enter a verse reference.");
-        return;
-      }
     } else if (searchType === SearchType.LABEL) {
       if (!topLevelLabelInput) {
         setError("Please enter a label for label search.");
         return;
       }
     }
+
+    const newSearchId = Date.now().toString();
+    setSearchId(newSearchId);
+    console.log(`Initiating search with ID: ${newSearchId}`);
+    setIsLoading(true);
+    setSearchResult(null);
+    setError(null);
 
     const searchData = {
       bookId: searchType === SearchType.REFERENCE ? selectedOption : "",
@@ -274,16 +281,25 @@ const ACAIResourceView: React.FC = () => {
       searchType: searchType,
       labelInput:
         searchType === SearchType.LABEL ? topLevelLabelInput : labelInput,
+      searchId: newSearchId,
     };
 
-    console.log("Initiating search:", searchData);
-    setIsLoading(true);
-    setSearchResult(null);
-    setError(null);
     vscode.postMessage({
       command: "search",
       ...searchData,
     });
+  };
+
+  const handleCancelSearch = () => {
+    if (searchId) {
+      console.log(`Cancelling search with ID: ${searchId}`);
+      vscode.postMessage({
+        command: "cancelSearch",
+        searchId: searchId,
+      });
+      setIsLoading(false);
+      setSearchId(null);
+    }
   };
 
   const handleResultClick = (id: string) => {
@@ -461,6 +477,26 @@ const ACAIResourceView: React.FC = () => {
     }
   };
 
+  const handleResetFilters = () => {
+    setSelectedTypes(Object.values(RecordTypes));
+    setLabelInput("");
+
+    if (searchType === SearchType.REFERENCE) {
+      setTextInput("");
+      setSelectedOption("");
+    } else {
+      setTopLevelLabelInput("");
+    }
+
+    sendStateUpdate({
+      selectedTypes: Object.values(RecordTypes),
+      labelInput: "",
+      ...(searchType === SearchType.REFERENCE
+        ? { textInput: "", selectedOption: "" }
+        : { topLevelLabelInput: "" }),
+    });
+  };
+
   return (
     <div className="acai-resource-view">
       <h1>ACAI Resources</h1>
@@ -479,11 +515,10 @@ const ACAIResourceView: React.FC = () => {
             {renderTopLevelInputs()}
             <button
               className="search-button"
-              onClick={handleSearch}
-              disabled={isLoading}
-              title="Click to search"
+              onClick={isLoading ? handleCancelSearch : handleSearch}
+              title={isLoading ? "Click to cancel search" : "Click to search"}
             >
-              {isLoading ? "Searching..." : "Search"}
+              {isLoading ? "Cancel Search" : "Search"}
             </button>
           </div>
           {isFilterExpanded && (
@@ -515,6 +550,9 @@ const ACAIResourceView: React.FC = () => {
                   </VSCodeCheckbox>
                 ))}
               </div>
+              <VSCodeLink className="reset-link" onClick={handleResetFilters}>
+                reset
+              </VSCodeLink>
             </div>
           )}
         </div>

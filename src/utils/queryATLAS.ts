@@ -1,12 +1,25 @@
-import { ApolloClient, InMemoryCache, gql } from "@apollo/client";
+import { ApolloClient, InMemoryCache, gql, HttpLink } from "@apollo/client";
 import { AcaiRecord } from "../../types";
+import fetch from "cross-fetch";
 
-const client = new ApolloClient({
-  uri: "https://acai-resources-preview---symphony-api-svc-prod-25c5xl4maa-uk.a.run.app/graphql/",
-  cache: new InMemoryCache(),
-});
+const createClient = (signal?: AbortSignal) => {
+  return new ApolloClient({
+    link: new HttpLink({
+      uri: "https://acai-resources-preview---symphony-api-svc-prod-25c5xl4maa-uk.a.run.app/graphql/",
+      fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+        return fetch(input, { ...init, signal });
+      },
+    }),
+    cache: new InMemoryCache(),
+  });
+};
 
-export async function sendRefQuery(filters: any): Promise<AcaiRecord[]> {
+export async function sendRefQuery(
+  filters: any,
+  signal?: AbortSignal
+): Promise<AcaiRecord[]> {
+  const client = createClient(signal);
+
   try {
     console.log(`Querying ATLAS with filters:`, filters);
 
@@ -40,7 +53,12 @@ export async function sendRefQuery(filters: any): Promise<AcaiRecord[]> {
   }
 }
 
-export async function sendLabelQuery(filters: any): Promise<AcaiRecord[]> {
+export async function sendLabelQuery(
+  filters: any,
+  signal?: AbortSignal
+): Promise<AcaiRecord[]> {
+  const client = createClient(signal);
+
   try {
     console.log(`Querying ATLAS with label filters:`, filters);
 
@@ -105,7 +123,8 @@ export async function queryATLAS(
   verseRef: string,
   selectedTypes: string[],
   labelInput: string,
-  searchType: string
+  searchType: string,
+  signal?: AbortSignal
 ): Promise<any> {
   const filters: any = {
     recordTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
@@ -118,12 +137,12 @@ export async function queryATLAS(
       `Querying ATLAS for combined reference: ${usfmRef}, types: ${selectedTypes}, label input: ${labelInput}, search type: ${searchType}`
     );
     filters.scriptureReference = { usfmRef };
-    return sendRefQuery(filters);
+    return sendRefQuery(filters, signal);
   } else if (searchType === "Label") {
     console.log(
       `Querying ATLAS by label: ${labelInput}, types: ${selectedTypes}, search type: ${searchType}`
     );
-    return sendLabelQuery(filters);
+    return sendLabelQuery(filters, signal);
   } else {
     throw new Error("Invalid search type");
   }

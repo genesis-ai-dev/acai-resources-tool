@@ -15,6 +15,8 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     topLevelLabelInput?: string;
   } = {};
 
+  private activeSearches: Map<string, AbortController> = new Map();
+
   constructor(
     private readonly _extensionUri: vscode.Uri,
     private readonly _context: vscode.ExtensionContext
@@ -114,8 +116,12 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
             message.verseRef,
             webviewView,
             message.labelInput,
-            message.searchType
+            message.searchType,
+            message.searchId
           );
+          return;
+        case "cancelSearch":
+          this.handleCancelSearch(message.searchId, webviewView);
           return;
         case "updateState":
           // Add this case to handle state updates from the webview
@@ -162,18 +168,23 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     verseRef: string,
     webviewView: vscode.WebviewView,
     labelInput: string,
-    searchType: string
+    searchType: string,
+    searchId: string
   ) {
     console.log(
-      `Handling search for book ${bookId}, verse ${verseRef}, label input: ${labelInput}, search type: ${searchType}`
+      `Handling search for book ${bookId}, verse ${verseRef}, label input: ${labelInput}, search type: ${searchType}, search ID: ${searchId}`
     );
+    const abortController = new AbortController();
+    this.activeSearches.set(searchId, abortController);
+
     try {
       const result: AcaiRecord[] = await queryATLAS(
         bookId,
         verseRef,
         this.state.selectedTypes || [],
         labelInput,
-        searchType
+        searchType,
+        abortController.signal
       );
       console.log("Search completed successfully");
 
@@ -191,6 +202,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
       webviewView.webview.postMessage({
         command: "searchResult",
         result: result,
+        searchId: searchId,
       });
     } catch (error) {
       console.error("Error querying ATLAS:", error);
@@ -198,9 +210,30 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
       if (error instanceof Error) {
         errorMessage = error.message;
       }
+      if (errorMessage !== "Search cancelled") {
+        webviewView.webview.postMessage({
+          command: "searchError",
+          error: errorMessage,
+          searchId: searchId,
+        });
+      }
+    } finally {
+      this.activeSearches.delete(searchId);
+    }
+  }
+
+  private handleCancelSearch(
+    searchId: string,
+    webviewView: vscode.WebviewView
+  ) {
+    console.log(`Cancelling search with ID: ${searchId}`);
+    const abortController = this.activeSearches.get(searchId);
+    if (abortController) {
+      abortController.abort();
+      this.activeSearches.delete(searchId);
       webviewView.webview.postMessage({
-        command: "searchError",
-        error: errorMessage,
+        command: "searchCancelled",
+        searchId: searchId,
       });
     }
   }

@@ -54,6 +54,7 @@ label {
 }
 
 .filter-box {
+  position: relative;
   margin-top: 10px;
   padding: 10px;
   background-color: var(--vscode-editor-background);
@@ -92,6 +93,20 @@ select {
   font-size: var(--vscode-dropdown-font-size, var(--vscode-font-size));
   cursor: pointer;
   outline: none;
+}
+
+.reset-link {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  font-size: 0.8em;
+  cursor: pointer;
+  color: var(--vscode-descriptionForeground);
+  text-decoration: none;
+}
+
+.reset-link:hover {
+  text-decoration: underline;
 }
 
 select:focus {
