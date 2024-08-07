@@ -9,11 +9,13 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     selectedOption?: string;
     textInput?: string;
     searchResult?: AcaiRecord[];
-    selectedTypes?: string[];
+    selectedTypes: string[];
     searchType?: string;
     labelInput?: string;
     topLevelLabelInput?: string;
-  } = {};
+  } = {
+    selectedTypes: [],
+  };
 
   private activeSearches: Map<string, AbortController> = new Map();
 
@@ -22,7 +24,12 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     private readonly _context: vscode.ExtensionContext
   ) {
     console.log("ACAIResourcesViewProvider initialized");
-    this.state = this._context.globalState.get("acaiResourcesState") || {};
+    const savedState =
+      this._context.globalState.get("acaiResourcesState") || {};
+    this.state = {
+      selectedTypes: [],
+      ...savedState,
+    };
   }
 
   public resolveWebviewView(

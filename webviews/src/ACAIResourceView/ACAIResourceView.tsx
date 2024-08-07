@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./ACAIResourceView.css";
 import { AcaiRecord } from "../../../types";
 import {
@@ -69,7 +69,7 @@ const initialState: ACAIResourceViewState = {
   expandedResult: null,
   expandedGroups: Object.values(RecordTypes),
   isFilterExpanded: false,
-  selectedTypes: Object.values(RecordTypes),
+  selectedTypes: [],
   searchType: SearchType.REFERENCE,
   labelInput: "",
   topLevelLabelInput: "",
@@ -112,6 +112,7 @@ const ACAIResourceView: React.FC = () => {
     initialState.topLevelLabelInput
   );
   const [searchId, setSearchId] = useState<string | null>(null);
+  const isResetting = useRef(false);
 
   const sendStateUpdate = (state: Partial<ACAIResourceViewState>) => {
     vscode.postMessage({
@@ -121,13 +122,16 @@ const ACAIResourceView: React.FC = () => {
   };
 
   const handleTypeChange = (type: RecordTypes) => {
-    const newSelectedTypes = selectedTypes.includes(type)
-      ? selectedTypes.filter((t) => t !== type)
-      : [...selectedTypes, type];
+    if (isResetting.current) return;
 
-    setSelectedTypes(newSelectedTypes);
+    setSelectedTypes((prevTypes) => {
+      const newSelectedTypes = prevTypes.includes(type)
+        ? prevTypes.filter((t) => t !== type)
+        : [...prevTypes, type];
 
-    sendStateUpdate({ selectedTypes: newSelectedTypes });
+      sendStateUpdate({ selectedTypes: newSelectedTypes });
+      return newSelectedTypes;
+    });
   };
 
   const handleSearchTypeChange = (event: Event) => {
@@ -220,20 +224,13 @@ const ACAIResourceView: React.FC = () => {
   }, [options, selectedOption]);
 
   useEffect(() => {
-    console.log("Current state:", { selectedOption, textInput, searchResult });
     if (selectedOption && textInput && searchResult) {
-      console.log("State restored:", {
-        selectedOption,
-        textInput,
-        searchResult,
-      });
       // You can add any additional logic here that needs to run when the state is restored
     }
   }, [selectedOption, textInput, searchResult]);
 
   const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newValue = event.target.value;
-    console.log("Book selection changed:", newValue);
     setSelectedOption(newValue);
     sendStateUpdate({ selectedOption: newValue });
   };
@@ -243,11 +240,8 @@ const ACAIResourceView: React.FC = () => {
   ) => {
     const value = event.target.value;
     if (/^[0-9:\s-]*$/.test(value)) {
-      console.log("Verse reference input changed:", value);
       setTextInput(value);
       sendStateUpdate({ textInput: value });
-    } else {
-      console.warn("Invalid verse reference input:", value);
     }
   };
 
@@ -269,7 +263,6 @@ const ACAIResourceView: React.FC = () => {
 
     const newSearchId = Date.now().toString();
     setSearchId(newSearchId);
-    console.log(`Initiating search with ID: ${newSearchId}`);
     setIsLoading(true);
     setSearchResult(null);
     setError(null);
@@ -292,7 +285,6 @@ const ACAIResourceView: React.FC = () => {
 
   const handleCancelSearch = () => {
     if (searchId) {
-      console.log(`Cancelling search with ID: ${searchId}`);
       vscode.postMessage({
         command: "cancelSearch",
         searchId: searchId,
@@ -478,23 +470,26 @@ const ACAIResourceView: React.FC = () => {
   };
 
   const handleResetFilters = () => {
-    setSelectedTypes(Object.values(RecordTypes));
-    setLabelInput("");
+    isResetting.current = true;
 
-    if (searchType === SearchType.REFERENCE) {
-      setTextInput("");
-      setSelectedOption("");
-    } else {
-      setTopLevelLabelInput("");
-    }
+    setSelectedTypes([]);
+    setLabelInput("");
+    setTextInput("");
+    setSelectedOption("");
+    setTopLevelLabelInput("");
 
     sendStateUpdate({
-      selectedTypes: Object.values(RecordTypes),
+      selectedTypes: [],
       labelInput: "",
-      ...(searchType === SearchType.REFERENCE
-        ? { textInput: "", selectedOption: "" }
-        : { topLevelLabelInput: "" }),
+      textInput: "",
+      selectedOption: "",
+      topLevelLabelInput: "",
     });
+
+    // Use setTimeout to ensure all state updates have been processed
+    setTimeout(() => {
+      isResetting.current = false;
+    }, 0);
   };
 
   return (
@@ -544,7 +539,9 @@ const ACAIResourceView: React.FC = () => {
                   <VSCodeCheckbox
                     key={type}
                     checked={selectedTypes.includes(type)}
-                    onChange={() => handleTypeChange(type)}
+                    onChange={() =>
+                      !isResetting.current && handleTypeChange(type)
+                    }
                   >
                     {type.charAt(0) + type.slice(1).toLowerCase()}
                   </VSCodeCheckbox>

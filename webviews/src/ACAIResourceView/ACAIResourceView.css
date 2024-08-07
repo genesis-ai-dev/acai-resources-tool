@@ -390,3 +390,45 @@ h1 {
   gap: 10px;
   margin-top: 10px;
 }
+
+.alt-labels {
+  margin-bottom: 10px;
+}
+
+.alt-label {
+  display: inline-block;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  padding: 2px 6px;
+  margin-right: 5px;
+  margin-bottom: 5px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.result-articles,
+.result-assets,
+.result-data {
+  margin-top: 15px;
+}
+
+.article-item,
+.asset-item {
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: var(--vscode-editor-inactiveSelectionBackground);
+  border-radius: 4px;
+}
+
+.article-item h4,
+.asset-item h4 {
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.result-data pre {
+  background-color: var(--vscode-editor-inactiveSelectionBackground);
+  padding: 10px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
