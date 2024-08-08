@@ -1,14 +1,27 @@
-import { ApolloClient, InMemoryCache, gql } from "@apollo/client";
+import { ApolloClient, InMemoryCache, gql, HttpLink } from "@apollo/client";
 import { AcaiRecord } from "../../types";
+import fetch from "cross-fetch";
 
-const client = new ApolloClient({
-  uri: "https://acai-resources-preview---symphony-api-svc-prod-25c5xl4maa-uk.a.run.app/graphql/",
-  cache: new InMemoryCache(),
-});
+const createClient = (signal?: AbortSignal) => {
+  return new ApolloClient({
+    link: new HttpLink({
+      uri: "https://acai-resources-preview---symphony-api-svc-prod-25c5xl4maa-uk.a.run.app/graphql/",
+      fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+        return fetch(input, { ...init, signal });
+      },
+    }),
+    cache: new InMemoryCache(),
+  });
+};
 
-export async function sendQuery(usfmRef: string): Promise<AcaiRecord[]> {
+export async function sendRefQuery(
+  filters: any,
+  signal?: AbortSignal
+): Promise<AcaiRecord[]> {
+  const client = createClient(signal);
+
   try {
-    console.log(`Querying ATLAS for USFM reference: ${usfmRef}`);
+    console.log(`Querying ATLAS with filters:`, filters);
 
     const query = gql`
       query ACAIRecordsInPassage($acaiRecordsFilters: AcaiRecordFilter) {
@@ -25,21 +38,56 @@ export async function sendQuery(usfmRef: string): Promise<AcaiRecord[]> {
     const { data } = await client.query({
       query,
       variables: {
-        acaiRecordsFilters: {
-          scriptureReference: {
-            usfmRef,
-          },
-        },
+        acaiRecordsFilters: filters,
       },
     });
 
     if (data.acaiRecords && data.acaiRecords.length > 0) {
       return data.acaiRecords;
     } else {
-      throw new Error("No ACAI records found");
+      throw new Error("No ACAI records found.");
     }
   } catch (error) {
     console.error("Error querying ATLAS:", error);
+    throw error;
+  }
+}
+
+export async function sendLabelQuery(
+  filters: any,
+  signal?: AbortSignal
+): Promise<AcaiRecord[]> {
+  const client = createClient(signal);
+
+  try {
+    console.log(`Querying ATLAS with label filters:`, filters);
+
+    const query = gql`
+      query ACAIRecordsByLabel($acaiRecordsFilters: AcaiRecordFilter) {
+        acaiRecords(filters: $acaiRecordsFilters) {
+          id
+          label
+          description
+          recordType
+          uri
+        }
+      }
+    `;
+
+    const { data } = await client.query({
+      query,
+      variables: {
+        acaiRecordsFilters: filters,
+      },
+    });
+
+    if (data.acaiRecords && data.acaiRecords.length > 0) {
+      return data.acaiRecords;
+    } else {
+      throw new Error("No ACAI records found.");
+    }
+  } catch (error) {
+    console.error("Error querying ATLAS by label:", error);
     throw error;
   }
 }
@@ -72,9 +120,30 @@ function formatVerseRef(bookId: string, verseRef: string): string {
 
 export async function queryATLAS(
   bookId: string,
-  verseRef: string
+  verseRef: string,
+  selectedTypes: string[],
+  labelInput: string,
+  searchType: string,
+  signal?: AbortSignal
 ): Promise<any> {
-  const usfmRef = formatVerseRef(bookId, verseRef);
-  console.log(`Querying ATLAS for combined reference: ${usfmRef}`);
-  return sendQuery(usfmRef);
+  const filters: any = {
+    recordTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
+    label: labelInput ? { iContains: labelInput } : undefined,
+  };
+
+  if (searchType === "Reference") {
+    const usfmRef = formatVerseRef(bookId, verseRef);
+    console.log(
+      `Querying ATLAS for combined reference: ${usfmRef}, types: ${selectedTypes}, label input: ${labelInput}, search type: ${searchType}`
+    );
+    filters.scriptureReference = { usfmRef };
+    return sendRefQuery(filters, signal);
+  } else if (searchType === "Label") {
+    console.log(
+      `Querying ATLAS by label: ${labelInput}, types: ${selectedTypes}, search type: ${searchType}`
+    );
+    return sendLabelQuery(filters, signal);
+  } else {
+    throw new Error("Invalid search type");
+  }
 }
