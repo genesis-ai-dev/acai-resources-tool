@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./ACAIResourceView.css";
-import { AcaiRecord } from "../../../types";
+import { AcaiRecord, BookData } from "../../../types";
 import {
   provideVSCodeDesignSystem,
   vsCodeButton,
@@ -19,7 +19,7 @@ import {
   VSCodeLink,
 } from "@vscode/webview-ui-toolkit/react";
 
-// Ensure the VS Code design system is provided
+// Register VS Code design system components
 provideVSCodeDesignSystem().register(
   vsCodeButton(),
   vsCodeCheckbox(),
@@ -29,6 +29,7 @@ provideVSCodeDesignSystem().register(
   vsCodeLink()
 );
 
+// Enums and interfaces
 enum RecordTypes {
   PERSON = "PERSON",
   PLACE = "PLACE",
@@ -38,11 +39,6 @@ enum RecordTypes {
 enum SearchType {
   REFERENCE = "Reference",
   LABEL = "Label",
-}
-
-interface BookData {
-  id: string;
-  name: string;
 }
 
 interface ACAIResourceViewState {
@@ -75,94 +71,53 @@ const initialState: ACAIResourceViewState = {
   topLevelLabelInput: "",
 };
 
-declare global {
-  interface Window {
-    acquireVsCodeApi: () => any;
-  }
-}
-
+// VS Code API
 const vscode = window.acquireVsCodeApi();
 
 const ACAIResourceView: React.FC = () => {
-  const [selectedOption, setSelectedOption] = useState(
-    initialState.selectedOption
-  );
-  const [textInput, setTextInput] = useState(initialState.textInput);
-  const [searchResult, setSearchResult] = useState(initialState.searchResult);
-  const [error, setError] = useState(initialState.error);
-  const [isLoading, setIsLoading] = useState(initialState.isLoading);
-  const [expandedResult, setExpandedResult] = useState(
-    initialState.expandedResult
-  );
-  const [expandedGroups, setExpandedGroups] = useState(
-    initialState.expandedGroups
-  );
+  // State hooks
+  const [state, setState] = useState<ACAIResourceViewState>(initialState);
   const [options, setOptions] = useState<BookData[]>([]);
-  const [isFilterExpanded, setIsFilterExpanded] = useState(
-    initialState.isFilterExpanded
-  );
-  const [selectedTypes, setSelectedTypes] = useState<RecordTypes[]>(
-    initialState.selectedTypes
-  );
-  const [searchType, setSearchType] = useState<SearchType>(
-    initialState.searchType
-  );
-  const [labelInput, setLabelInput] = useState(initialState.labelInput);
-  const [topLevelLabelInput, setTopLevelLabelInput] = useState(
-    initialState.topLevelLabelInput
-  );
   const [searchId, setSearchId] = useState<string | null>(null);
   const isResetting = useRef(false);
 
+  // Memoize the updateState function
+  const updateState = useCallback(
+    (newState: Partial<ACAIResourceViewState>) => {
+      setState((prevState) => ({ ...prevState, ...newState }));
+      sendStateUpdate(newState);
+    },
+    []
+  );
+
+  // Send state update to VS Code extension
   const sendStateUpdate = (state: Partial<ACAIResourceViewState>) => {
-    vscode.postMessage({
-      command: "updateState",
-      state: state,
-    });
+    vscode.postMessage({ command: "updateState", state });
   };
 
+  // Handle type filter changes
   const handleTypeChange = (type: RecordTypes) => {
     if (isResetting.current) return;
 
-    setSelectedTypes((prevTypes) => {
-      const newSelectedTypes = prevTypes.includes(type)
-        ? prevTypes.filter((t) => t !== type)
-        : [...prevTypes, type];
-
-      sendStateUpdate({ selectedTypes: newSelectedTypes });
-      return newSelectedTypes;
+    updateState({
+      selectedTypes: state.selectedTypes.includes(type)
+        ? state.selectedTypes.filter((t) => t !== type)
+        : [...state.selectedTypes, type],
     });
   };
 
+  // Handle search type changes
   const handleSearchTypeChange = (event: Event) => {
-    const target = event.target as HTMLSelectElement;
-    const newSearchType = target.value as SearchType;
-    setSearchType(newSearchType);
-    setLabelInput("");
-    setTopLevelLabelInput("");
-    vscode.postMessage({
-      command: "updateState",
-      state: { searchType: newSearchType },
+    const newSearchType = (event.target as HTMLSelectElement)
+      .value as SearchType;
+    updateState({
+      searchType: newSearchType,
+      labelInput: "",
+      topLevelLabelInput: "",
     });
   };
 
-  const handleLabelInputChange = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    setLabelInput(target.value);
-  };
-
-  const handleTopLevelLabelInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setTopLevelLabelInput(event.target.value);
-  };
-
-  const handleBookChange = (event: Event) => {
-    const target = event.target as HTMLSelectElement;
-    setSelectedOption(target.value);
-    sendStateUpdate({ selectedOption: target.value });
-  };
-
+  // Effect for message listener
   useEffect(() => {
     const messageListener = (event: MessageEvent) => {
       const message = event.data;
@@ -171,146 +126,112 @@ const ACAIResourceView: React.FC = () => {
           setOptions(message.bookData);
           break;
         case "searchResult":
-          setSearchResult(message.result);
-          setError(null);
-          setIsLoading(false);
-          sendStateUpdate({ searchResult: message.result });
+          updateState({
+            searchResult: message.result,
+            error: null,
+            isLoading: false,
+          });
           break;
         case "searchError":
-          setError(message.error);
-          setSearchResult(null);
-          setIsLoading(false);
+          updateState({
+            error: message.error,
+            searchResult: null,
+            isLoading: false,
+          });
           break;
         case "restoreState":
-          if (message.selectedOption) {
-            setSelectedOption(message.selectedOption);
-          }
-          if (message.textInput) {
-            setTextInput(message.textInput);
-          }
-          if (message.searchResult) {
-            setSearchResult(message.searchResult);
-            setError(null);
-          }
-          if (message.selectedTypes) {
-            setSelectedTypes(message.selectedTypes);
-          }
-          if (message.searchType) {
-            setSearchType(message.searchType);
-          }
-          if (message.labelInput) {
-            setLabelInput(message.labelInput);
-          }
-          if (message.topLevelLabelInput) {
-            setTopLevelLabelInput(message.topLevelLabelInput);
-          }
+          updateState(message);
           break;
       }
     };
 
     window.addEventListener("message", messageListener);
-
     vscode.postMessage({ command: "requestInitialData" });
 
-    return () => {
-      window.removeEventListener("message", messageListener);
-    };
-  }, []);
+    return () => window.removeEventListener("message", messageListener);
+  }, [updateState]); // Include updateState in the dependency array
 
+  // Effect to request state restoration
   useEffect(() => {
-    if (options.length > 0 && selectedOption === "") {
+    if (options.length > 0 && state.selectedOption === "") {
       vscode.postMessage({ command: "requestStateRestore" });
     }
-  }, [options, selectedOption]);
+  }, [options, state.selectedOption]);
 
-  useEffect(() => {
-    if (selectedOption && textInput && searchResult) {
-      // You can add any additional logic here that needs to run when the state is restored
-    }
-  }, [selectedOption, textInput, searchResult]);
-
-  const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newValue = event.target.value;
-    setSelectedOption(newValue);
-    sendStateUpdate({ selectedOption: newValue });
-  };
-
-  const handleTextInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = event.target.value;
-    if (/^[0-9:\s-]*$/.test(value)) {
-      setTextInput(value);
-      sendStateUpdate({ textInput: value });
-    }
-  };
-
+  // Handle search
   const handleSearch = () => {
-    if (searchType === SearchType.REFERENCE) {
-      const selectedBook = options.find(
-        (option) => option.id === selectedOption
-      );
-      if (!selectedBook) {
-        setError("Please select a book for reference search.");
-        return;
-      }
-    } else if (searchType === SearchType.LABEL) {
-      if (!topLevelLabelInput) {
-        setError("Please enter a label for label search.");
-        return;
-      }
-    }
+    if (!validateSearch()) return;
 
     const newSearchId = Date.now().toString();
     setSearchId(newSearchId);
-    setIsLoading(true);
-    setSearchResult(null);
-    setError(null);
-
-    const searchData = {
-      bookId: searchType === SearchType.REFERENCE ? selectedOption : "",
-      verseRef: searchType === SearchType.REFERENCE ? textInput : "",
-      types: selectedTypes,
-      searchType: searchType,
-      labelInput:
-        searchType === SearchType.LABEL ? topLevelLabelInput : labelInput,
-      searchId: newSearchId,
-    };
+    updateState({ isLoading: true, searchResult: null, error: null });
 
     vscode.postMessage({
       command: "search",
-      ...searchData,
+      bookId:
+        state.searchType === SearchType.REFERENCE ? state.selectedOption : "",
+      verseRef:
+        state.searchType === SearchType.REFERENCE ? state.textInput : "",
+      types: state.selectedTypes,
+      searchType: state.searchType,
+      labelInput:
+        state.searchType === SearchType.LABEL
+          ? state.topLevelLabelInput
+          : state.labelInput,
+      searchId: newSearchId,
     });
   };
 
+  // Validate search inputs
+  const validateSearch = () => {
+    if (state.searchType === SearchType.REFERENCE) {
+      if (!options.find((option) => option.id === state.selectedOption)) {
+        updateState({ error: "Please select a book for reference search." });
+        return false;
+      }
+    } else if (state.searchType === SearchType.LABEL) {
+      if (!state.topLevelLabelInput) {
+        updateState({ error: "Please enter a label for label search." });
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Cancel ongoing search
   const handleCancelSearch = () => {
     if (searchId) {
-      vscode.postMessage({
-        command: "cancelSearch",
-        searchId: searchId,
-      });
-      setIsLoading(false);
+      vscode.postMessage({ command: "cancelSearch", searchId });
       setSearchId(null);
+      updateState({ isLoading: false });
     }
   };
 
+  // Toggle result expansion
   const handleResultClick = (id: string) => {
-    setExpandedResult(expandedResult === id ? null : id);
+    updateState({ expandedResult: state.expandedResult === id ? null : id });
   };
 
+  // Toggle group expansion
   const toggleGroup = (type: RecordTypes) => {
-    setExpandedGroups((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    updateState({
+      expandedGroups: state.expandedGroups.includes(type)
+        ? state.expandedGroups.filter((t) => t !== type)
+        : [...state.expandedGroups, type],
+    });
+  };
+
+  // Render description with HTML support
+  const renderDescription = (description: string | undefined) => {
+    if (!description) return <p>No description available.</p>;
+    return description.includes("<p>") || description.includes("</p>") ? (
+      <div dangerouslySetInnerHTML={{ __html: description }} />
+    ) : (
+      <p>{description}</p>
     );
   };
 
-  const renderDescription = (description: string) => {
-    const paragraphs = description.split("</p>").filter((p) => p.trim() !== "");
-    return paragraphs.map((paragraph, index) => (
-      <p key={index} dangerouslySetInnerHTML={{ __html: paragraph + "</p>" }} />
-    ));
-  };
-
+  // Group search results by type
   const groupResultsByType = (results: AcaiRecord[]) => {
     const grouped: { [key in RecordTypes]: AcaiRecord[] } = {
       [RecordTypes.PERSON]: [],
@@ -319,12 +240,10 @@ const ACAIResourceView: React.FC = () => {
     };
 
     results.forEach((result) => {
-      const types = result.recordType
-        .split(",")
-        .map((type) => type.trim().toUpperCase());
-      types.forEach((type) => {
-        if (type in RecordTypes) {
-          grouped[type as RecordTypes].push(result);
+      result.recordType.split(",").forEach((type) => {
+        const trimmedType = type.trim().toUpperCase() as RecordTypes;
+        if (trimmedType in RecordTypes) {
+          grouped[trimmedType].push(result);
         }
       });
     });
@@ -332,10 +251,11 @@ const ACAIResourceView: React.FC = () => {
     return grouped;
   };
 
+  // Render result group
   const renderResultGroup = (type: RecordTypes, results: AcaiRecord[]) => {
     if (results.length === 0) return null;
 
-    const isExpanded = expandedGroups.includes(type);
+    const isExpanded = state.expandedGroups.includes(type);
 
     return (
       <div key={type} className="result-group">
@@ -347,7 +267,7 @@ const ACAIResourceView: React.FC = () => {
         </h3>
         {isExpanded && (
           <ul className="result-list">
-            {results.map((result: AcaiRecord) => (
+            {results.map((result) => (
               <li key={result.id} className="result-item">
                 <div
                   className="result-label"
@@ -355,22 +275,8 @@ const ACAIResourceView: React.FC = () => {
                 >
                   {result.label}
                 </div>
-                {expandedResult === result.id && (
-                  <div className="result-details">
-                    <h3 className="result-details-label">{result.label}</h3>
-                    <div className="result-description">
-                      {renderDescription(result.description)}
-                    </div>
-                    <div className="result-info">
-                      <p>
-                        <strong>Record Type:</strong> {result.recordType}
-                      </p>
-                      <p>
-                        <strong>URI:</strong> {result.uri}
-                      </p>
-                    </div>
-                  </div>
-                )}
+                {state.expandedResult === result.id &&
+                  renderResultDetails(result)}
               </li>
             ))}
           </ul>
@@ -379,20 +285,70 @@ const ACAIResourceView: React.FC = () => {
     );
   };
 
-  const getInstructionText = () => {
-    return searchType === SearchType.REFERENCE
-      ? "Select a book and specify a verse reference:"
-      : "Enter a label to search for:";
+  // Render result details
+  const renderResultDetails = (result: AcaiRecord) => (
+    <div className="result-details">
+      <h3 className="result-details-label">{result.label}</h3>
+      <div className="result-description">
+        {renderDescription(result.description)}
+      </div>
+      <div className="result-info">
+        <p>
+          <strong>Record Type:</strong> {result.recordType}
+        </p>
+        <p>
+          <strong>URI:</strong> {result.uri}
+        </p>
+      </div>
+      {result.articles && result.articles.length > 0 && (
+        <div className="result-articles">
+          <h4>Related Articles</h4>
+          {result.articles.map((article, index) => (
+            <div key={index} className="article-item">
+              <h5>{article.title}</h5>
+              <p>{article.localized?.en || "No English content available"}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      {result.assets && result.assets.length > 0 && (
+        <div className="result-assets">
+          <h4>Related Assets</h4>
+          {result.assets.map((asset, index) => (
+            <div key={index} className="asset-item">
+              <h5>{asset.title}</h5>
+              <p>File: {asset.file}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  // Reset filters
+  const handleResetFilters = () => {
+    isResetting.current = true;
+    updateState({
+      selectedTypes: [],
+      labelInput: "",
+      textInput: "",
+      selectedOption: "",
+      topLevelLabelInput: "",
+    });
+    setTimeout(() => {
+      isResetting.current = false;
+    }, 0);
   };
 
+  // Render functions for different parts of the UI
   const renderTopLevelInputs = () => {
-    if (searchType === SearchType.REFERENCE) {
+    if (state.searchType === SearchType.REFERENCE) {
       return (
         <>
           <select
             id="option-select"
-            value={selectedOption}
-            onChange={handleSelectChange}
+            value={state.selectedOption}
+            onChange={(e) => updateState({ selectedOption: e.target.value })}
             title="Select a book from the Bible"
           >
             <option value="">--</option>
@@ -405,8 +361,13 @@ const ACAIResourceView: React.FC = () => {
           <input
             type="text"
             className="text-input"
-            value={textInput}
-            onChange={handleTextInputChange}
+            value={state.textInput}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (/^[0-9:\s-]*$/.test(value)) {
+                updateState({ textInput: value });
+              }
+            }}
             placeholder="verse ref."
             title="Leave empty to search entire book; Enter a verse reference (e.g. 1:1, 1:1-5, 1:1-2:3)"
           />
@@ -417,8 +378,8 @@ const ACAIResourceView: React.FC = () => {
         <input
           type="text"
           className="text-input full-width"
-          value={topLevelLabelInput}
-          onChange={handleTopLevelLabelInputChange}
+          value={state.topLevelLabelInput}
+          onChange={(e) => updateState({ topLevelLabelInput: e.target.value })}
           placeholder="Enter label"
           title="Enter a label or partial label (e.g. 'Judah', 'el', 'Lord')"
         />
@@ -427,15 +388,15 @@ const ACAIResourceView: React.FC = () => {
   };
 
   const renderFilterBoxInputs = () => {
-    if (searchType === SearchType.REFERENCE) {
+    if (state.searchType === SearchType.REFERENCE) {
       return (
         <>
           <h4 className="filter-subheader">Label Filter:</h4>
           <div className="filter-row">
             <VSCodeTextField
               placeholder="Enter label"
-              value={labelInput}
-              onChange={handleLabelInputChange as any}
+              value={state.labelInput}
+              onChange={(e: any) => updateState({ labelInput: e.target.value })}
             />
           </div>
         </>
@@ -446,8 +407,10 @@ const ACAIResourceView: React.FC = () => {
           <h4 className="filter-subheader">Reference Filter:</h4>
           <div className="filter-row">
             <VSCodeDropdown
-              value={selectedOption}
-              onChange={handleBookChange as any}
+              value={state.selectedOption}
+              onChange={(e: any) =>
+                updateState({ selectedOption: e.target.value })
+              }
             >
               <VSCodeOption value="">--</VSCodeOption>
               {options.map((option) => (
@@ -460,8 +423,8 @@ const ACAIResourceView: React.FC = () => {
           <div className="filter-row filter-row-gap">
             <VSCodeTextField
               placeholder="verse ref."
-              value={textInput}
-              onChange={(e: any) => setTextInput(e.target.value)}
+              value={state.textInput}
+              onChange={(e: any) => updateState({ textInput: e.target.value })}
             />
           </div>
         </>
@@ -469,40 +432,24 @@ const ACAIResourceView: React.FC = () => {
     }
   };
 
-  const handleResetFilters = () => {
-    isResetting.current = true;
-
-    setSelectedTypes([]);
-    setLabelInput("");
-    setTextInput("");
-    setSelectedOption("");
-    setTopLevelLabelInput("");
-
-    sendStateUpdate({
-      selectedTypes: [],
-      labelInput: "",
-      textInput: "",
-      selectedOption: "",
-      topLevelLabelInput: "",
-    });
-
-    // Use setTimeout to ensure all state updates have been processed
-    setTimeout(() => {
-      isResetting.current = false;
-    }, 0);
-  };
-
   return (
     <div className="acai-resource-view">
       <h1>ACAI Resources</h1>
+      {/* Main search interface */}
       <div className="select-container">
-        <label htmlFor="option-select">{getInstructionText()}</label>
+        <label htmlFor="option-select">
+          {state.searchType === SearchType.REFERENCE
+            ? "Select a book and specify a verse reference:"
+            : "Enter a label to search for:"}
+        </label>
         <div className="input-wrapper">
           <div className="input-container">
             <VSCodeButton
               appearance="icon"
               aria-label="Toggle filter options"
-              onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+              onClick={() =>
+                updateState({ isFilterExpanded: !state.isFilterExpanded })
+              }
               title="Click to show or hide additional filter options"
             >
               <i className="codicon codicon-filter"></i>
@@ -510,18 +457,20 @@ const ACAIResourceView: React.FC = () => {
             {renderTopLevelInputs()}
             <button
               className="search-button"
-              onClick={isLoading ? handleCancelSearch : handleSearch}
-              title={isLoading ? "Click to cancel search" : "Click to search"}
+              onClick={state.isLoading ? handleCancelSearch : handleSearch}
+              title={
+                state.isLoading ? "Click to cancel search" : "Click to search"
+              }
             >
-              {isLoading ? "Cancel Search" : "Search"}
+              {state.isLoading ? "Cancel Search" : "Search"}
             </button>
           </div>
-          {isFilterExpanded && (
+          {state.isFilterExpanded && (
             <div className="filter-box">
               <h4 className="filter-subheader">Search By:</h4>
               <div className="search-input-container">
                 <VSCodeDropdown
-                  value={searchType}
+                  value={state.searchType}
                   onChange={handleSearchTypeChange as any}
                   title="Select the type of search to perform"
                 >
@@ -538,7 +487,7 @@ const ACAIResourceView: React.FC = () => {
                 {Object.values(RecordTypes).map((type) => (
                   <VSCodeCheckbox
                     key={type}
-                    checked={selectedTypes.includes(type)}
+                    checked={state.selectedTypes.includes(type)}
                     onChange={() =>
                       !isResetting.current && handleTypeChange(type)
                     }
@@ -554,12 +503,14 @@ const ACAIResourceView: React.FC = () => {
           )}
         </div>
       </div>
-      {isLoading && <div className="loading-spinner"></div>}
-      {error && <div className="error-message">{error}</div>}
-      {searchResult && (
+      {/* Loading spinner and error message */}
+      {state.isLoading && <div className="loading-spinner"></div>}
+      {state.error && <div className="error-message">{state.error}</div>}
+      {/* Search results */}
+      {state.searchResult && (
         <div className="search-result">
           <h2>Search Result</h2>
-          {Object.entries(groupResultsByType(searchResult)).map(
+          {Object.entries(groupResultsByType(state.searchResult)).map(
             ([type, results]) => renderResultGroup(type as RecordTypes, results)
           )}
         </div>

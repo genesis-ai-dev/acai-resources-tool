@@ -25,9 +25,35 @@ interface AcaiRecord {
   __typename: string;
   id: string;
   label: string;
-  description: string;
+  description?: string;
   recordType: string;
   uri: string;
+  articles?: {
+    title: string;
+    localized: {
+      en?: string;
+    };
+  }[];
+  assets?: {
+    title: string;
+    file: string;
+  }[];
+}
+
+// New AcaiRecordFilter type
+interface AcaiRecordFilter {
+  recordTypes?: string[];
+  label?: {
+    iContains?: string;
+  };
+  scriptureReference?: {
+    usfmRef?: string;
+  };
+}
+
+export interface BookData {
+  id: string;
+  name: string;
 }
 
 interface FrontEndMessage {

@@ -1,27 +1,20 @@
+/* Base styles */
 body {
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size);
   color: var(--vscode-foreground);
   background-color: var(--vscode-editor-background);
   padding: 20px;
-  margin: 0 0px;
+  margin: 0;
 }
 
+/* Layout */
 .select-container {
   margin-bottom: 16px;
 }
 
-label {
-  display: block;
-  margin-bottom: 8px;
-  margin-left: 20px;
-  margin-right: 20px;
-  color: var(--vscode-input-foreground);
-}
-
 .input-wrapper {
-  margin-left: 20px;
-  margin-right: 20px;
+  margin: 0 20px;
 }
 
 .input-container {
@@ -31,28 +24,86 @@ label {
   gap: 10px;
 }
 
+/* Typography */
+h1 {
+  font-size: 1.8em;
+  margin: 0 20px 16px;
+  color: var(--vscode-foreground);
+}
+
+label {
+  display: block;
+  margin: 0 20px 8px;
+  color: var(--vscode-input-foreground);
+}
+
+/* Form elements */
+select,
+.text-input {
+  flex: 1;
+  min-width: 120px;
+  padding: 8px 12px;
+  border: 1px solid var(--vscode-dropdown-border);
+  border-radius: 2px;
+  background-color: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-dropdown-font-size, var(--vscode-font-size));
+  cursor: pointer;
+  outline: none;
+}
+
+select:focus,
+.text-input:focus {
+  border-color: var(--vscode-focusBorder);
+  outline: 1px solid var(--vscode-focusBorder);
+}
+
+select:hover {
+  border-color: var(--vscode-input-hoverBorder, var(--vscode-dropdown-border));
+}
+
+select option {
+  background-color: var(--vscode-dropdown-listBackground);
+  color: var(--vscode-dropdown-foreground);
+}
+
+/* Buttons */
+.search-button,
 .input-container vscode-button {
-  flex: 0 0 auto;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+.search-button {
+  padding: 8px 16px;
+}
+
+.input-container vscode-button {
   width: 32px;
   height: 32px;
   padding: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
-  border: none;
-  border-radius: 2px;
 }
 
+.search-button:hover,
 .input-container vscode-button:hover {
   background-color: var(--vscode-button-hoverBackground);
 }
 
-.input-container vscode-button i {
-  font-size: 16px;
+.search-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
+/* Filter box */
 .filter-box {
   position: relative;
   margin-top: 10px;
@@ -65,9 +116,8 @@ label {
 .filter-subheader {
   font-size: 12px;
   font-weight: bold;
-  margin-bottom: 6px;
+  margin: 10px 0 6px;
   color: var(--vscode-foreground);
-  margin-top: 10px; 
 }
 
 .checkbox-group {
@@ -75,24 +125,6 @@ label {
   flex-direction: column;
   gap: 8px;
   margin-top: 10px;
-}
-
-.checkbox-group vscode-checkbox {
-  margin-bottom: 4px;
-}
-
-select {
-  flex: 1;
-  min-width: 120px;
-  padding: 8px 12px;
-  border: 1px solid var(--vscode-dropdown-border);
-  border-radius: 2px;
-  background-color: var(--vscode-dropdown-background);
-  color: var(--vscode-dropdown-foreground);
-  font-family: var(--vscode-font-family);
-  font-size: var(--vscode-dropdown-font-size, var(--vscode-font-size));
-  cursor: pointer;
-  outline: none;
 }
 
 .reset-link {
@@ -109,61 +141,7 @@ select {
   text-decoration: underline;
 }
 
-select:focus {
-  border-color: var(--vscode-focusBorder);
-  outline: 1px solid var(--vscode-focusBorder);
-}
-
-select:hover {
-  border-color: var(--vscode-input-hoverBorder, var(--vscode-dropdown-border));
-}
-
-select option {
-  background-color: var(--vscode-dropdown-listBackground);
-  color: var(--vscode-dropdown-foreground);
-}
-
-.text-input {
-  flex: 1 1;
-  min-width: 80px;
-  padding: 8px 12px;
-  border: 1px solid var(--vscode-dropdown-border);
-  border-radius: 2px;
-  background-color: var(--vscode-input-background);
-  color: var(--vscode-input-foreground);
-  font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size);
-}
-
-.text-input:focus {
-  border-color: var(--vscode-focusBorder);
-  outline: 1px solid var(--vscode-focusBorder);
-}
-
-.search-button {
-  flex: 0 0 auto;
-  padding: 8px 16px;
-  background-color: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
-  border: none;
-  border-radius: 2px;
-  cursor: pointer;
-  font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size);
-}
-
-.search-button:hover {
-  background-color: var(--vscode-button-hoverBackground);
-}
-
-h1 {
-  font-size: 1.8em;
-  margin-bottom: 16px;
-  margin-left: 20px;
-  margin-right: 20px;
-  color: var(--vscode-foreground);
-}
-
+/* Search results */
 .search-result {
   margin-top: 20px;
   padding: 12px;
@@ -210,8 +188,7 @@ h1 {
 
 .result-details-label {
   font-size: 1.3em;
-  margin-top: 0;
-  margin-bottom: 16px;
+  margin: 0 0 16px;
   color: var(--vscode-editor-foreground);
 }
 
@@ -219,14 +196,12 @@ h1 {
   margin-bottom: 16px;
 }
 
-.result-description p {
+.result-description p,
+.result-info p {
   margin: 10px 0;
 }
 
-.result-info p {
-  margin: 5px 0;
-}
-
+/* Result groups */
 .result-group {
   margin-bottom: 20px;
 }
@@ -256,6 +231,7 @@ h1 {
   top: -1px;
 }
 
+/* Loading spinner */
 .loading-spinner {
   width: 40px;
   height: 40px;
@@ -271,17 +247,13 @@ h1 {
   100% { transform: rotate(360deg); }
 }
 
-.search-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
+/* Error message */
 .error-message {
-  margin-left: 20px;
+  margin: 0 20px 16px;
   color: var(--vscode-errorForeground);
-  margin-bottom: 16px;
 }
 
+/* Responsive design */
 @media (max-width: 400px) {
   .input-container {
     flex-wrap: wrap;
@@ -311,45 +283,13 @@ h1 {
   }
 }
 
-.filter-box vscode-dropdown {
-  width: 100%;
-  height: 28px;
-  margin-bottom: 8px;
-}
-
-.search-input-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.search-input-container vscode-dropdown,
-.search-input-container vscode-text-field {
-  width: 100%;
-  height: 28px;
-}
-
-.filter-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 0;
-  align-items: center;
-}
-
-.filter-row.filter-row-gap {
-  margin-top: 0px; /* This creates the vertical gap */
-}
-
-.filter-row vscode-dropdown,
-.filter-row vscode-text-field {
-  flex: 1;
-}
-
+/* Filter components */
 .filter-box vscode-dropdown,
 .filter-box vscode-text-field,
 .filter-box vscode-button {
+  width: 100%;
   height: 28px;
+  margin-bottom: 8px;
   box-sizing: border-box;
 }
 
@@ -368,11 +308,16 @@ h1 {
   margin-bottom: 0;
 }
 
+/* Filter layout */
 .filter-row {
   display: flex;
   gap: 8px;
   margin-bottom: 0;
   align-items: center;
+}
+
+.filter-row.filter-row-gap {
+  margin-top: 8px;
 }
 
 .filter-row vscode-dropdown,
@@ -391,6 +336,7 @@ h1 {
   margin-top: 10px;
 }
 
+/* Alternative labels */
 .alt-labels {
   margin-bottom: 10px;
 }
@@ -406,6 +352,7 @@ h1 {
   font-size: 0.9em;
 }
 
+/* Result sections */
 .result-articles,
 .result-assets,
 .result-data {
@@ -420,10 +367,9 @@ h1 {
   border-radius: 4px;
 }
 
-.article-item h4,
-.asset-item h4 {
-  margin-top: 0;
-  margin-bottom: 5px;
+.article-item h5,
+.asset-item h5 {
+  margin: 0 0 5px;
 }
 
 .result-data pre {

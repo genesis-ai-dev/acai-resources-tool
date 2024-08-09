@@ -5,225 +5,128 @@ import { AcaiRecord } from "../../types";
 
 export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "acai-resources-sidebar";
-  private state: {
-    selectedOption?: string;
-    textInput?: string;
-    searchResult?: AcaiRecord[];
-    selectedTypes: string[];
-    searchType?: string;
-    labelInput?: string;
-    topLevelLabelInput?: string;
-  } = {
-    selectedTypes: [],
-  };
-
+  private state: ACAIResourcesState;
   private activeSearches: Map<string, AbortController> = new Map();
 
   constructor(
-    private readonly _extensionUri: vscode.Uri,
-    private readonly _context: vscode.ExtensionContext
+    private readonly extensionUri: vscode.Uri,
+    private readonly context: vscode.ExtensionContext
   ) {
-    console.log("ACAIResourcesViewProvider initialized");
-    const savedState =
-      this._context.globalState.get("acaiResourcesState") || {};
-    this.state = {
-      selectedTypes: [],
-      ...savedState,
-    };
+    this.state = this.loadState();
   }
 
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
-    context: vscode.WebviewViewResolveContext,
+    _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
   ) {
-    console.log("Resolving webview view");
+    this.setupWebview(webviewView);
+    this.setupEventListeners(webviewView);
+  }
+
+  // Helper methods
+
+  private setupWebview(webviewView: vscode.WebviewView): void {
     webviewView.webview.options = {
       enableScripts: true,
-      localResourceRoots: [this._extensionUri],
+      localResourceRoots: [this.extensionUri],
     };
 
-    const codiconsUri = webviewView.webview.asWebviewUri(
-      vscode.Uri.joinPath(
-        this._extensionUri,
-        "node_modules",
-        "@vscode/codicons",
-        "dist",
-        "codicon.css"
-      )
-    );
-
-    webviewView.webview.html = this._getHtmlForWebview(
+    const codiconsUri = this.getCodiconsUri(webviewView);
+    webviewView.webview.html = this.getHtmlForWebview(
       webviewView.webview,
       codiconsUri
     );
 
-    // Get book data and send it to the webview
-    const bookData = this.getBookData();
-    console.log("Sending book data to webview:", bookData);
-    webviewView.webview.postMessage({
-      command: "setBookData",
-      bookData: bookData,
-    });
+    this.sendInitialData(webviewView);
+  }
 
-    // Restore state if available
-    if (this.state.selectedOption && this.state.textInput) {
-      console.log("Restoring state:", this.state);
-      webviewView.webview.postMessage({
-        command: "restoreState",
-        selectedOption: this.state.selectedOption,
-        textInput: this.state.textInput,
-        searchResult: this.state.searchResult,
-        selectedTypes: this.state.selectedTypes,
-        searchType: this.state.searchType,
-        labelInput: this.state.labelInput,
-        topLevelLabelInput: this.state.topLevelLabelInput,
-      });
-    }
-
-    // Add listeners for webview visibility changes
+  private setupEventListeners(webviewView: vscode.WebviewView): void {
     webviewView.onDidChangeVisibility(() => {
       if (!webviewView.visible) {
-        console.log("Webview is being hidden, saving state");
         this.saveState();
       }
     });
 
-    webviewView.onDidDispose(() => {
-      console.log("Webview is being disposed, saving state");
-      this.saveState();
-    });
+    webviewView.onDidDispose(() => this.saveState());
 
-    // Add message listener
     webviewView.webview.onDidReceiveMessage((message) => {
-      console.log(`Received message from webview: ${JSON.stringify(message)}`);
-      switch (message.command) {
-        case "requestInitialData":
-          console.log("Received requestInitialData, sending book data");
-          const bookData = this.getBookData();
-          webviewView.webview.postMessage({
-            command: "setBookData",
-            bookData: bookData,
-          });
-          // Also send the current state
-          webviewView.webview.postMessage({
-            command: "restoreState",
-            selectedOption: this.state.selectedOption,
-            textInput: this.state.textInput,
-            searchResult: this.state.searchResult,
-            selectedTypes: this.state.selectedTypes,
-            searchType: this.state.searchType,
-            labelInput: this.state.labelInput,
-            topLevelLabelInput: this.state.topLevelLabelInput,
-          });
-          return;
-        case "search":
-          this.handleSearch(
-            message.bookId,
-            message.verseRef,
-            webviewView,
-            message.labelInput,
-            message.searchType,
-            message.searchId
-          );
-          return;
-        case "cancelSearch":
-          this.handleCancelSearch(message.searchId, webviewView);
-          return;
-        case "updateState":
-          // Add this case to handle state updates from the webview
-          this.state = { ...this.state, ...message.state };
-          this.saveState();
-          return;
-        case "requestStateRestore":
-          console.log("Received requestStateRestore, sending current state");
-          webviewView.webview.postMessage({
-            command: "restoreState",
-            selectedOption: this.state.selectedOption,
-            textInput: this.state.textInput,
-            searchResult: this.state.searchResult,
-            selectedTypes: this.state.selectedTypes,
-            searchType: this.state.searchType,
-            labelInput: this.state.labelInput,
-            topLevelLabelInput: this.state.topLevelLabelInput,
-          });
-          return;
-      }
+      this.handleWebviewMessage(message, webviewView);
     });
   }
 
-  private getBookData() {
-    console.log("Fetching book data");
-    const bookData = Object.entries(vrefData)
-      .map(([id, book]) => {
-        return { id, name: book.name };
+  private handleWebviewMessage(
+    message: any,
+    webviewView: vscode.WebviewView
+  ): void {
+    switch (message.command) {
+      case "requestInitialData":
+        this.sendInitialData(webviewView);
+        break;
+      case "search":
+        this.handleSearch(message, webviewView);
+        break;
+      case "cancelSearch":
+        this.handleCancelSearch(message.searchId, webviewView);
+        break;
+      case "updateState":
+        this.updateState(message.state);
+        break;
+      case "requestStateRestore":
+        this.restoreState(webviewView);
+        break;
+    }
+  }
+
+  private getBookData(): BookData[] {
+    return Object.entries(vrefData)
+      .map(([id, book]): BookData | null => {
+        if (book.name) {
+          return { id, name: book.name };
+        }
+        return null;
       })
+      .filter((book): book is BookData => book !== null)
       .sort((a, b) => {
         const ordA = vrefData[a.id]?.ord;
         const ordB = vrefData[b.id]?.ord;
-        if (ordA && ordB) {
-          return ordA.localeCompare(ordB);
-        }
-        return 0;
+        return ordA && ordB ? ordA.localeCompare(ordB) : 0;
       });
-    console.log(`Sorted ${bookData.length} books`);
-    return bookData;
   }
 
   private async handleSearch(
-    bookId: string,
-    verseRef: string,
-    webviewView: vscode.WebviewView,
-    labelInput: string,
-    searchType: string,
-    searchId: string
-  ) {
-    console.log(
-      `Handling search for book ${bookId}, verse ${verseRef}, label input: ${labelInput}, search type: ${searchType}, search ID: ${searchId}`
-    );
+    message: SearchMessage,
+    webviewView: vscode.WebviewView
+  ): Promise<void> {
+    const { bookId, verseRef, labelInput, searchType, searchId } = message;
     const abortController = new AbortController();
     this.activeSearches.set(searchId, abortController);
 
     try {
-      const result: AcaiRecord[] = await queryATLAS(
+      const result = await queryATLAS(
         bookId,
         verseRef,
-        this.state.selectedTypes || [],
+        this.state.selectedTypes,
         labelInput,
         searchType,
         abortController.signal
       );
-      console.log("Search completed successfully");
 
-      // Save state
-      this.state = {
-        ...this.state,
+      this.updateState({
         selectedOption: searchType === "Reference" ? bookId : "",
         textInput: searchType === "Reference" ? verseRef : "",
         searchResult: result,
-        labelInput: labelInput,
-        searchType: searchType,
-      };
-      this.saveState();
+        labelInput,
+        searchType,
+      });
 
       webviewView.webview.postMessage({
         command: "searchResult",
-        result: result,
-        searchId: searchId,
+        result,
+        searchId,
       });
     } catch (error) {
-      console.error("Error querying ATLAS:", error);
-      let errorMessage = "An error occurred while searching. Please try again.";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      if (errorMessage !== "Search cancelled") {
-        webviewView.webview.postMessage({
-          command: "searchError",
-          error: errorMessage,
-          searchId: searchId,
-        });
-      }
+      this.handleSearchError(error, searchId, webviewView);
     } finally {
       this.activeSearches.delete(searchId);
     }
@@ -232,28 +135,44 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
   private handleCancelSearch(
     searchId: string,
     webviewView: vscode.WebviewView
-  ) {
-    console.log(`Cancelling search with ID: ${searchId}`);
+  ): void {
     const abortController = this.activeSearches.get(searchId);
     if (abortController) {
       abortController.abort();
       this.activeSearches.delete(searchId);
-      webviewView.webview.postMessage({
-        command: "searchCancelled",
-        searchId: searchId,
-      });
+      webviewView.webview.postMessage({ command: "searchCancelled", searchId });
     }
   }
 
-  private saveState() {
-    console.log("Saving state:", this.state);
-    this._context.globalState.update("acaiResourcesState", this.state);
+  // ... (other helper methods)
+
+  // State management
+
+  private loadState(): ACAIResourcesState {
+    const savedState =
+      this.context.globalState.get<ACAIResourcesState>("acaiResourcesState") ||
+      {};
+    return { selectedTypes: [], ...savedState };
   }
 
-  private _getHtmlForWebview(webview: vscode.Webview, codiconsUri: vscode.Uri) {
+  private saveState(): void {
+    this.context.globalState.update("acaiResourcesState", this.state);
+  }
+
+  private updateState(newState: Partial<ACAIResourcesState>): void {
+    this.state = { ...this.state, ...newState };
+    this.saveState();
+  }
+
+  // HTML generation
+
+  private getHtmlForWebview(
+    webview: vscode.Webview,
+    codiconsUri: vscode.Uri
+  ): string {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(
-        this._extensionUri,
+        this.extensionUri,
         "dist",
         "webviews",
         "ACAIResourceView",
@@ -262,7 +181,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     );
     const styleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(
-        this._extensionUri,
+        this.extensionUri,
         "dist",
         "webviews",
         "ACAIResourceView",
@@ -285,4 +204,95 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
             </body>
             </html>`;
   }
+
+  // Helper methods
+
+  private getCodiconsUri(webviewView: vscode.WebviewView): vscode.Uri {
+    return webviewView.webview.asWebviewUri(
+      vscode.Uri.joinPath(
+        this.extensionUri,
+        "node_modules",
+        "@vscode/codicons",
+        "dist",
+        "codicon.css"
+      )
+    );
+  }
+
+  private sendInitialData(webviewView: vscode.WebviewView): void {
+    const bookData = this.getBookData();
+    webviewView.webview.postMessage({
+      command: "setBookData",
+      bookData: bookData,
+    });
+
+    if (this.state.selectedOption && this.state.textInput) {
+      webviewView.webview.postMessage({
+        command: "restoreState",
+        selectedOption: this.state.selectedOption,
+        textInput: this.state.textInput,
+        searchResult: this.state.searchResult,
+        selectedTypes: this.state.selectedTypes,
+        searchType: this.state.searchType,
+        labelInput: this.state.labelInput,
+        topLevelLabelInput: this.state.topLevelLabelInput,
+      });
+    }
+  }
+
+  private handleSearchError(
+    error: any,
+    searchId: string,
+    webviewView: vscode.WebviewView
+  ): void {
+    let errorMessage = "An error occurred while searching. Please try again.";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    if (errorMessage !== "Search cancelled") {
+      webviewView.webview.postMessage({
+        command: "searchError",
+        error: errorMessage,
+        searchId: searchId,
+      });
+    }
+  }
+
+  private restoreState(webviewView: vscode.WebviewView): void {
+    webviewView.webview.postMessage({
+      command: "restoreState",
+      selectedOption: this.state.selectedOption,
+      textInput: this.state.textInput,
+      searchResult: this.state.searchResult,
+      selectedTypes: this.state.selectedTypes,
+      searchType: this.state.searchType,
+      labelInput: this.state.labelInput,
+      topLevelLabelInput: this.state.topLevelLabelInput,
+    });
+  }
+}
+
+// Types
+
+interface ACAIResourcesState {
+  selectedOption?: string;
+  textInput?: string;
+  searchResult?: AcaiRecord[];
+  selectedTypes: string[];
+  searchType?: string;
+  labelInput?: string;
+  topLevelLabelInput?: string;
+}
+
+interface BookData {
+  id: string;
+  name: string;
+}
+
+interface SearchMessage {
+  bookId: string;
+  verseRef: string;
+  labelInput: string;
+  searchType: string;
+  searchId: string;
 }
