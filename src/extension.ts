@@ -1,8 +1,10 @@
 import * as vscode from "vscode";
 import { ACAIResourcesViewProvider } from "./providers/ACAIResourcesViewProvider";
 
+let provider: ACAIResourcesViewProvider;
+
 export function activate(context: vscode.ExtensionContext) {
-  const provider = new ACAIResourcesViewProvider(context.extensionUri);
+  provider = new ACAIResourcesViewProvider(context.extensionUri, context);
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
