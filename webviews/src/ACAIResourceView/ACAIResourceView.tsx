@@ -55,8 +55,6 @@ interface ACAIResourceViewState {
   labelInput: string;
   topLevelLabelInput: string;
   pinnedRecords: AcaiRecord[];
-  expandedPinnedRecords: Set<string>;
-  isPinnedExpanded: boolean;
 }
 
 const initialState: ACAIResourceViewState = {
@@ -73,65 +71,35 @@ const initialState: ACAIResourceViewState = {
   labelInput: "",
   topLevelLabelInput: "",
   pinnedRecords: [],
-  expandedPinnedRecords: new Set(),
-  isPinnedExpanded: true,
 };
 
 // VS Code API
 const vscode = window.acquireVsCodeApi();
 
 const ACAIResourceView: React.FC = () => {
-  console.log("ACAIResourceView rendering");
+  // State hooks
   const [state, setState] = useState<ACAIResourceViewState>(initialState);
   const [options, setOptions] = useState<BookData[]>([]);
   const [searchId, setSearchId] = useState<string | null>(null);
   const isResetting = useRef(false);
   const [expandedDetailRecord, setExpandedDetailRecord] =
     useState<AcaiRecord | null>(null);
-  const [pinnedRecords, setPinnedRecords] = useState<AcaiRecord[]>([]);
 
+  // Memoize the updateState function
   const updateState = useCallback(
-    (
-      newState:
-        | Partial<ACAIResourceViewState>
-        | ((prevState: ACAIResourceViewState) => Partial<ACAIResourceViewState>)
-    ) => {
-      setState((prevState) => {
-        const partialNewState =
-          typeof newState === "function" ? newState(prevState) : newState;
-        const updatedState = { ...prevState, ...partialNewState };
-        vscode.postMessage({ command: "updateState", state: updatedState });
-        return updatedState;
-      });
+    (newState: Partial<ACAIResourceViewState>) => {
+      setState((prevState) => ({ ...prevState, ...newState }));
+      sendStateUpdate(newState);
     },
     []
   );
 
-  const togglePinRecord = useCallback(
-    (record: AcaiRecord, isPinnedVersion: boolean) => {
-      setPinnedRecords((prevPinnedRecords) => {
-        const isPinned = prevPinnedRecords.some((r) => r.id === record.id);
+  // Send state update to VS Code extension
+  const sendStateUpdate = (state: Partial<ACAIResourceViewState>) => {
+    vscode.postMessage({ command: "updateState", state });
+  };
 
-        if (isPinned && !isPinnedVersion) {
-          return prevPinnedRecords;
-        }
-
-        let newPinnedRecords;
-        if (isPinned) {
-          newPinnedRecords = prevPinnedRecords.filter(
-            (r) => r.id !== record.id
-          );
-        } else {
-          newPinnedRecords = [...prevPinnedRecords, record];
-        }
-
-        updateState({ pinnedRecords: newPinnedRecords });
-        return newPinnedRecords;
-      });
-    },
-    [updateState]
-  );
-
+  // Handle type filter changes
   const handleTypeChange = (type: RecordTypes) => {
     if (isResetting.current) return;
 
@@ -142,6 +110,7 @@ const ACAIResourceView: React.FC = () => {
     });
   };
 
+  // Handle search type changes
   const handleSearchTypeChange = (event: Event) => {
     const newSearchType = (event.target as HTMLSelectElement)
       .value as SearchType;
@@ -152,6 +121,7 @@ const ACAIResourceView: React.FC = () => {
     });
   };
 
+  // Effect for message listener
   useEffect(() => {
     const messageListener = (event: MessageEvent) => {
       const message = event.data;
@@ -174,12 +144,7 @@ const ACAIResourceView: React.FC = () => {
           });
           break;
         case "restoreState":
-          setState((prevState) => ({
-            ...prevState,
-            ...message,
-            pinnedRecords: message.pinnedRecords || [],
-          }));
-          setPinnedRecords(message.pinnedRecords || []);
+          updateState(message);
           break;
       }
     };
@@ -188,14 +153,16 @@ const ACAIResourceView: React.FC = () => {
     vscode.postMessage({ command: "requestInitialData" });
 
     return () => window.removeEventListener("message", messageListener);
-  }, []);
+  }, [updateState]); // Include updateState in the dependency array
 
+  // Effect to request state restoration
   useEffect(() => {
     if (options.length > 0 && state.selectedOption === "") {
       vscode.postMessage({ command: "requestStateRestore" });
     }
   }, [options, state.selectedOption]);
 
+  // Handle search
   const handleSearch = () => {
     if (!validateSearch()) return;
 
@@ -219,6 +186,7 @@ const ACAIResourceView: React.FC = () => {
     });
   };
 
+  // Validate search inputs
   const validateSearch = () => {
     if (state.searchType === SearchType.REFERENCE) {
       if (!options.find((option) => option.id === state.selectedOption)) {
@@ -234,6 +202,7 @@ const ACAIResourceView: React.FC = () => {
     return true;
   };
 
+  // Cancel ongoing search
   const handleCancelSearch = () => {
     if (searchId) {
       vscode.postMessage({ command: "cancelSearch", searchId });
@@ -242,63 +211,32 @@ const ACAIResourceView: React.FC = () => {
     }
   };
 
-  const handleResultClick = useCallback((id: string, isPinned: boolean) => {
-    console.log("handleResultClick called with:", id, isPinned);
-    updateState((prevState) => {
-      if (isPinned) {
-        const newExpandedPinnedRecords = new Set(
-          prevState.expandedPinnedRecords
-        );
-        if (newExpandedPinnedRecords.has(id)) {
-          newExpandedPinnedRecords.delete(id);
-        } else {
-          newExpandedPinnedRecords.add(id);
-        }
-        return { expandedPinnedRecords: newExpandedPinnedRecords };
-      } else {
-        return { expandedResult: prevState.expandedResult === id ? null : id };
-      }
-    });
-  }, []);
-
-  const toggleGroup = useCallback((type: RecordTypes) => {
-    updateState((prevState) => ({
-      expandedGroups: prevState.expandedGroups.includes(type)
-        ? prevState.expandedGroups.filter((t) => t !== type)
-        : [...prevState.expandedGroups, type],
-    }));
-  }, []);
-
-  const togglePinnedGroup = () => {
-    updateState({ isPinnedExpanded: !state.isPinnedExpanded });
+  // Toggle result expansion
+  const handleResultClick = (id: string) => {
+    updateState({ expandedResult: state.expandedResult === id ? null : id });
   };
 
-  const togglePinnedRecord = (id: string) => {
-    updateState((prevState) => {
-      const newExpandedPinnedRecords = new Set(prevState.expandedPinnedRecords);
-      if (newExpandedPinnedRecords.has(id)) {
-        newExpandedPinnedRecords.delete(id);
-      } else {
-        newExpandedPinnedRecords.add(id);
-      }
-      return { expandedPinnedRecords: newExpandedPinnedRecords };
+  // Toggle group expansion
+  const toggleGroup = (type: RecordTypes) => {
+    updateState({
+      expandedGroups: state.expandedGroups.includes(type)
+        ? state.expandedGroups.filter((t) => t !== type)
+        : [...state.expandedGroups, type],
     });
   };
 
-  const collapseAllPinnedRecords = () => {
-    updateState({ expandedPinnedRecords: new Set() });
-  };
-
+  // Render description with HTML support
   const renderDescription = (description: string | undefined) => {
-    if (!description) {
-      return <p>No description available.</p>;
-    }
-    return <div dangerouslySetInnerHTML={{ __html: description }} />;
+    if (!description) return <p>No description available.</p>;
+    return description.includes("<p>") || description.includes("</p>") ? (
+      <div dangerouslySetInnerHTML={{ __html: description }} />
+    ) : (
+      <p>{description}</p>
+    );
   };
 
-  const groupResultsByType = (
-    results: AcaiRecord[]
-  ): { [key in RecordTypes]: AcaiRecord[] } => {
+  // Group search results by type
+  const groupResultsByType = (results: AcaiRecord[]) => {
     const grouped: { [key in RecordTypes]: AcaiRecord[] } = {
       [RecordTypes.PERSON]: [],
       [RecordTypes.PLACE]: [],
@@ -306,12 +244,10 @@ const ACAIResourceView: React.FC = () => {
     };
 
     results.forEach((result) => {
-      const types = result.recordType
-        .split(",")
-        .map((t) => t.trim().toUpperCase() as RecordTypes);
-      types.forEach((type) => {
-        if (type in RecordTypes) {
-          grouped[type].push(result);
+      result.recordType.split(",").forEach((type) => {
+        const trimmedType = type.trim().toUpperCase() as RecordTypes;
+        if (trimmedType in RecordTypes) {
+          grouped[trimmedType].push(result);
         }
       });
     });
@@ -319,106 +255,35 @@ const ACAIResourceView: React.FC = () => {
     return grouped;
   };
 
-  const renderResultItem = useCallback(
-    (result: AcaiRecord, isPinned: boolean) => {
-      console.log("renderResultItem called with:", result, isPinned);
-      const isExpanded = isPinned
-        ? state.expandedPinnedRecords.has(result.id)
-        : state.expandedResult === result.id;
+  // Render result group
+  const renderResultGroup = (type: RecordTypes, results: AcaiRecord[]) => {
+    if (results.length === 0) return null;
 
-      return (
-        <li key={result.id} className="result-item">
-          <div
-            className="result-label"
-            onClick={() => handleResultClick(result.id, isPinned)}
-          >
-            {result.label}
-            <span
-              className={`codicon codicon-pin ${isPinned ? "pinned" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                togglePinRecord(result, isPinned);
-              }}
-              title={isPinned ? "Unpin" : "Pin"}
-            ></span>
-          </div>
-          {isExpanded && renderResultDetails(result)}
-        </li>
-      );
-    },
-    [
-      state.expandedResult,
-      state.expandedPinnedRecords,
-      togglePinRecord,
-      handleResultClick,
-    ]
-  );
+    const isExpanded = state.expandedGroups.includes(type);
 
-  const renderPinnedGroup = () => {
-    console.log("renderPinnedGroup called");
     return (
-      <div className="result-group">
-        <div className="result-group-header">
-          <h3
-            className={`result-group-title ${
-              state.isPinnedExpanded ? "expanded" : ""
-            }`}
-            onClick={togglePinnedGroup}
-          >
-            Pinned Records ({pinnedRecords.length})
-          </h3>
-          {state.isPinnedExpanded && pinnedRecords.length > 0 && (
-            <VSCodeLink
-              className="collapse-all"
-              onClick={collapseAllPinnedRecords}
-            >
-              collapse all
-            </VSCodeLink>
-          )}
-        </div>
-        {state.isPinnedExpanded && pinnedRecords.length > 0 && (
+      <div key={type} className="result-group">
+        <h3
+          className={`result-group-title ${isExpanded ? "expanded" : ""}`}
+          onClick={() => toggleGroup(type)}
+        >
+          {type} ({results.length})
+        </h3>
+        {isExpanded && (
           <ul className="result-list">
-            {pinnedRecords.map((result) => renderResultItem(result, true))}
+            {results.map((result) => renderResultItem(result))}
           </ul>
-        )}
-        {state.isPinnedExpanded && pinnedRecords.length === 0 && (
-          <p>No pinned records yet.</p>
         )}
       </div>
     );
   };
 
-  const renderResultGroup = useCallback(
-    (type: RecordTypes, results: AcaiRecord[]) => {
-      console.log("renderResultGroup called with:", type, results);
-      if (results.length === 0) return null;
-
-      const isExpanded = state.expandedGroups.includes(type);
-
-      return (
-        <div key={type} className="result-group">
-          <h3
-            className={`result-group-title ${isExpanded ? "expanded" : ""}`}
-            onClick={() => toggleGroup(type)}
-          >
-            {type} ({results.length})
-          </h3>
-          {isExpanded && (
-            <ul className="result-list">
-              {results.map((result) => renderResultItem(result, false))}
-            </ul>
-          )}
-        </div>
-      );
-    },
-    [state.expandedGroups, renderResultItem, toggleGroup]
-  );
-
+  // Render result details
   const renderResultDetails = (result: AcaiRecord) => (
     <div className="result-details">
       <h3
         className="result-details-label"
-        onClick={() => setExpandedDetailRecord(result)}
+        onClick={() => handleHeaderClick(result)}
         style={{ cursor: "pointer" }}
       >
         {result.label}
@@ -459,27 +324,7 @@ const ACAIResourceView: React.FC = () => {
     </div>
   );
 
-  const renderExpandedDetailView = () => {
-    if (!expandedDetailRecord) return null;
-
-    return (
-      <div className="expanded-detail-view">
-        <VSCodeButton
-          appearance="icon"
-          aria-label="Go back"
-          onClick={() => setExpandedDetailRecord(null)}
-        >
-          <i className="codicon codicon-arrow-left"></i>
-        </VSCodeButton>
-        <h2>{expandedDetailRecord.label}</h2>
-        <div className="expanded-detail-content">
-          {renderResultDetails(expandedDetailRecord)}
-          <p>More info coming soon!</p>
-        </div>
-      </div>
-    );
-  };
-
+  // Reset filters
   const handleResetFilters = () => {
     isResetting.current = true;
     updateState({
@@ -494,6 +339,7 @@ const ACAIResourceView: React.FC = () => {
     }, 0);
   };
 
+  // Render functions for different parts of the UI
   const renderTopLevelInputs = () => {
     if (state.searchType === SearchType.REFERENCE) {
       return (
@@ -585,9 +431,205 @@ const ACAIResourceView: React.FC = () => {
     }
   };
 
+  const [pinnedRecords, setPinnedRecords] = useState<AcaiRecord[]>([]);
+
+  const togglePinRecord = useCallback(
+    (record: AcaiRecord, isPinnedVersion: boolean) => {
+      setPinnedRecords((prevPinnedRecords) => {
+        const isPinned = prevPinnedRecords.some((r) => r.id === record.id);
+
+        if (isPinned && !isPinnedVersion) {
+          return prevPinnedRecords;
+        }
+
+        let newPinnedRecords;
+        if (isPinned) {
+          newPinnedRecords = prevPinnedRecords.filter(
+            (r) => r.id !== record.id
+          );
+        } else {
+          newPinnedRecords = [...prevPinnedRecords, record];
+        }
+
+        // Update the state in the extension
+        vscode.postMessage({
+          command: "updateState",
+          state: { pinnedRecords: newPinnedRecords },
+        });
+
+        return newPinnedRecords;
+      });
+    },
+    []
+  );
+
   useEffect(() => {
-    console.log("Component mounted or updated. Current state:", state);
-  });
+    const messageListener = (event: MessageEvent) => {
+      const message = event.data;
+      switch (message.command) {
+        case "setBookData":
+          setOptions(message.bookData);
+          break;
+        case "searchResult":
+          updateState({
+            searchResult: message.result,
+            error: null,
+            isLoading: false,
+          });
+          break;
+        case "searchError":
+          updateState({
+            error: message.error,
+            searchResult: null,
+            isLoading: false,
+          });
+          break;
+        case "restoreState":
+          setState((prevState) => ({
+            ...prevState,
+            ...message,
+            pinnedRecords: message.pinnedRecords || [],
+          }));
+          setPinnedRecords(message.pinnedRecords || []);
+          break;
+      }
+    };
+
+    window.addEventListener("message", messageListener);
+    vscode.postMessage({ command: "requestInitialData" });
+
+    return () => window.removeEventListener("message", messageListener);
+  }, [updateState]);
+
+  const [isPinnedExpanded, setIsPinnedExpanded] = useState(true);
+  const [expandedPinnedRecords, setExpandedPinnedRecords] = useState<
+    Set<string>
+  >(new Set());
+
+  const togglePinnedGroup = () => {
+    setIsPinnedExpanded(!isPinnedExpanded);
+  };
+
+  const togglePinnedRecord = (id: string) => {
+    setExpandedPinnedRecords((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const collapseAllPinnedRecords = () => {
+    setExpandedPinnedRecords(new Set());
+  };
+
+  const renderPinnedGroup = () => {
+    return (
+      <div className="result-group">
+        <div className="result-group-header">
+          <h3
+            className={`result-group-title ${
+              isPinnedExpanded ? "expanded" : ""
+            }`}
+            onClick={togglePinnedGroup}
+          >
+            Pinned Records ({pinnedRecords.length})
+          </h3>
+          {isPinnedExpanded && pinnedRecords.length > 0 && (
+            <VSCodeLink
+              className="collapse-all"
+              onClick={collapseAllPinnedRecords}
+            >
+              collapse all
+            </VSCodeLink>
+          )}
+        </div>
+        {isPinnedExpanded && pinnedRecords.length > 0 && (
+          <ul className="result-list">
+            {pinnedRecords.map((result) => (
+              <li key={result.id} className="result-item">
+                <div
+                  className="result-label"
+                  onClick={() => togglePinnedRecord(result.id)}
+                >
+                  {result.label}
+                  <span
+                    className="codicon codicon-pin pinned"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePinRecord(result, true);
+                    }}
+                    title="Unpin"
+                  ></span>
+                </div>
+                {expandedPinnedRecords.has(result.id) &&
+                  renderResultDetails(result)}
+              </li>
+            ))}
+          </ul>
+        )}
+        {isPinnedExpanded && pinnedRecords.length === 0 && (
+          <p>No pinned records yet.</p>
+        )}
+      </div>
+    );
+  };
+
+  const renderResultItem = (
+    result: AcaiRecord,
+    isPinnedVersion: boolean = false
+  ) => {
+    const isPinned = pinnedRecords.some((r) => r.id === result.id);
+
+    return (
+      <li key={result.id} className="result-item">
+        <div
+          className="result-label"
+          onClick={() => handleResultClick(result.id)}
+        >
+          {result.label}
+          <span
+            className={`codicon ${isPinned ? "codicon-pinned" : "codicon-pin"}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              togglePinRecord(result, isPinnedVersion);
+            }}
+            title={isPinned ? "Unpin" : "Pin"}
+          ></span>
+        </div>
+        {state.expandedResult === result.id && renderResultDetails(result)}
+      </li>
+    );
+  };
+
+  const handleHeaderClick = (record: AcaiRecord) => {
+    setExpandedDetailRecord(record);
+  };
+
+  const renderExpandedDetailView = () => {
+    if (!expandedDetailRecord) return null;
+
+    return (
+      <div className="expanded-detail-view">
+        <div className="expanded-detail-header">
+          <VSCodeButton
+            appearance="icon"
+            onClick={() => setExpandedDetailRecord(null)}
+          >
+            <i className="codicon codicon-arrow-left"></i>
+          </VSCodeButton>
+          <h2>{expandedDetailRecord.label}</h2>
+        </div>
+        <div className="expanded-detail-content">
+          {renderResultDetails(expandedDetailRecord)}
+          <p>More info coming soon!</p>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="acai-resource-view">
@@ -668,17 +710,11 @@ const ACAIResourceView: React.FC = () => {
               )}
             </div>
           </div>
-
-          {/* Pinned section - always visible */}
-          <div className="pinned-section">{renderPinnedGroup()}</div>
-
-          {/* Loading spinner */}
           {state.isLoading && <div className="loading-spinner"></div>}
-
-          {/* Error message */}
           {state.error && <div className="error-message">{state.error}</div>}
 
-          {/* Search Results section */}
+          <div className="pinned-section">{renderPinnedGroup()}</div>
+
           {state.searchResult && state.searchResult.length > 0 && (
             <div className="search-result">
               <h2 className="section-header">Search Result</h2>
