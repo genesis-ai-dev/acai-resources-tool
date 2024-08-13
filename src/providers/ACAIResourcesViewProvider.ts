@@ -75,6 +75,9 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
       case "requestStateRestore":
         this.restoreState(webviewView);
         break;
+      case "updatePinnedRecords":
+        this.updateState({ pinnedRecords: message.pinnedRecords });
+        break;
     }
   }
 
@@ -152,7 +155,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     const savedState =
       this.context.globalState.get<ACAIResourcesState>("acaiResourcesState") ||
       {};
-    return { selectedTypes: [], ...savedState };
+    return { selectedTypes: [], pinnedRecords: [], ...savedState };
   }
 
   private saveState(): void {
@@ -226,18 +229,17 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
       bookData: bookData,
     });
 
-    if (this.state.selectedOption && this.state.textInput) {
-      webviewView.webview.postMessage({
-        command: "restoreState",
-        selectedOption: this.state.selectedOption,
-        textInput: this.state.textInput,
-        searchResult: this.state.searchResult,
-        selectedTypes: this.state.selectedTypes,
-        searchType: this.state.searchType,
-        labelInput: this.state.labelInput,
-        topLevelLabelInput: this.state.topLevelLabelInput,
-      });
-    }
+    webviewView.webview.postMessage({
+      command: "restoreState",
+      selectedOption: this.state.selectedOption,
+      textInput: this.state.textInput,
+      searchResult: this.state.searchResult,
+      selectedTypes: this.state.selectedTypes,
+      searchType: this.state.searchType,
+      labelInput: this.state.labelInput,
+      topLevelLabelInput: this.state.topLevelLabelInput,
+      pinnedRecords: this.state.pinnedRecords,
+    });
   }
 
   private handleSearchError(
@@ -268,6 +270,7 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
       searchType: this.state.searchType,
       labelInput: this.state.labelInput,
       topLevelLabelInput: this.state.topLevelLabelInput,
+      pinnedRecords: this.state.pinnedRecords,
     });
   }
 }
@@ -282,6 +285,7 @@ interface ACAIResourcesState {
   searchType?: string;
   labelInput?: string;
   topLevelLabelInput?: string;
+  pinnedRecords: AcaiRecord[];
 }
 
 interface BookData {

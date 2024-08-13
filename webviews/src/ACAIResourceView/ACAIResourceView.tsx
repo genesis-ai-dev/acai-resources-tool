@@ -54,6 +54,9 @@ interface ACAIResourceViewState {
   searchType: SearchType;
   labelInput: string;
   topLevelLabelInput: string;
+  pinnedRecords: AcaiRecord[];
+  expandedPinnedRecords: Set<string>;
+  isPinnedExpanded: boolean;
 }
 
 const initialState: ACAIResourceViewState = {
@@ -69,33 +72,66 @@ const initialState: ACAIResourceViewState = {
   searchType: SearchType.REFERENCE,
   labelInput: "",
   topLevelLabelInput: "",
+  pinnedRecords: [],
+  expandedPinnedRecords: new Set(),
+  isPinnedExpanded: true,
 };
 
 // VS Code API
 const vscode = window.acquireVsCodeApi();
 
 const ACAIResourceView: React.FC = () => {
-  // State hooks
+  console.log("ACAIResourceView rendering");
   const [state, setState] = useState<ACAIResourceViewState>(initialState);
   const [options, setOptions] = useState<BookData[]>([]);
   const [searchId, setSearchId] = useState<string | null>(null);
   const isResetting = useRef(false);
+  const [expandedDetailRecord, setExpandedDetailRecord] =
+    useState<AcaiRecord | null>(null);
+  const [pinnedRecords, setPinnedRecords] = useState<AcaiRecord[]>([]);
 
-  // Memoize the updateState function
   const updateState = useCallback(
-    (newState: Partial<ACAIResourceViewState>) => {
-      setState((prevState) => ({ ...prevState, ...newState }));
-      sendStateUpdate(newState);
+    (
+      newState:
+        | Partial<ACAIResourceViewState>
+        | ((prevState: ACAIResourceViewState) => Partial<ACAIResourceViewState>)
+    ) => {
+      setState((prevState) => {
+        const partialNewState =
+          typeof newState === "function" ? newState(prevState) : newState;
+        const updatedState = { ...prevState, ...partialNewState };
+        vscode.postMessage({ command: "updateState", state: updatedState });
+        return updatedState;
+      });
     },
     []
   );
 
-  // Send state update to VS Code extension
-  const sendStateUpdate = (state: Partial<ACAIResourceViewState>) => {
-    vscode.postMessage({ command: "updateState", state });
-  };
+  const togglePinRecord = useCallback(
+    (record: AcaiRecord, isPinnedVersion: boolean) => {
+      setPinnedRecords((prevPinnedRecords) => {
+        const isPinned = prevPinnedRecords.some((r) => r.id === record.id);
 
-  // Handle type filter changes
+        if (isPinned && !isPinnedVersion) {
+          return prevPinnedRecords;
+        }
+
+        let newPinnedRecords;
+        if (isPinned) {
+          newPinnedRecords = prevPinnedRecords.filter(
+            (r) => r.id !== record.id
+          );
+        } else {
+          newPinnedRecords = [...prevPinnedRecords, record];
+        }
+
+        updateState({ pinnedRecords: newPinnedRecords });
+        return newPinnedRecords;
+      });
+    },
+    [updateState]
+  );
+
   const handleTypeChange = (type: RecordTypes) => {
     if (isResetting.current) return;
 
@@ -106,7 +142,6 @@ const ACAIResourceView: React.FC = () => {
     });
   };
 
-  // Handle search type changes
   const handleSearchTypeChange = (event: Event) => {
     const newSearchType = (event.target as HTMLSelectElement)
       .value as SearchType;
@@ -117,7 +152,6 @@ const ACAIResourceView: React.FC = () => {
     });
   };
 
-  // Effect for message listener
   useEffect(() => {
     const messageListener = (event: MessageEvent) => {
       const message = event.data;
@@ -140,7 +174,12 @@ const ACAIResourceView: React.FC = () => {
           });
           break;
         case "restoreState":
-          updateState(message);
+          setState((prevState) => ({
+            ...prevState,
+            ...message,
+            pinnedRecords: message.pinnedRecords || [],
+          }));
+          setPinnedRecords(message.pinnedRecords || []);
           break;
       }
     };
@@ -149,16 +188,14 @@ const ACAIResourceView: React.FC = () => {
     vscode.postMessage({ command: "requestInitialData" });
 
     return () => window.removeEventListener("message", messageListener);
-  }, [updateState]); // Include updateState in the dependency array
+  }, []);
 
-  // Effect to request state restoration
   useEffect(() => {
     if (options.length > 0 && state.selectedOption === "") {
       vscode.postMessage({ command: "requestStateRestore" });
     }
   }, [options, state.selectedOption]);
 
-  // Handle search
   const handleSearch = () => {
     if (!validateSearch()) return;
 
@@ -182,7 +219,6 @@ const ACAIResourceView: React.FC = () => {
     });
   };
 
-  // Validate search inputs
   const validateSearch = () => {
     if (state.searchType === SearchType.REFERENCE) {
       if (!options.find((option) => option.id === state.selectedOption)) {
@@ -198,7 +234,6 @@ const ACAIResourceView: React.FC = () => {
     return true;
   };
 
-  // Cancel ongoing search
   const handleCancelSearch = () => {
     if (searchId) {
       vscode.postMessage({ command: "cancelSearch", searchId });
@@ -207,32 +242,63 @@ const ACAIResourceView: React.FC = () => {
     }
   };
 
-  // Toggle result expansion
-  const handleResultClick = (id: string) => {
-    updateState({ expandedResult: state.expandedResult === id ? null : id });
+  const handleResultClick = useCallback((id: string, isPinned: boolean) => {
+    console.log("handleResultClick called with:", id, isPinned);
+    updateState((prevState) => {
+      if (isPinned) {
+        const newExpandedPinnedRecords = new Set(
+          prevState.expandedPinnedRecords
+        );
+        if (newExpandedPinnedRecords.has(id)) {
+          newExpandedPinnedRecords.delete(id);
+        } else {
+          newExpandedPinnedRecords.add(id);
+        }
+        return { expandedPinnedRecords: newExpandedPinnedRecords };
+      } else {
+        return { expandedResult: prevState.expandedResult === id ? null : id };
+      }
+    });
+  }, []);
+
+  const toggleGroup = useCallback((type: RecordTypes) => {
+    updateState((prevState) => ({
+      expandedGroups: prevState.expandedGroups.includes(type)
+        ? prevState.expandedGroups.filter((t) => t !== type)
+        : [...prevState.expandedGroups, type],
+    }));
+  }, []);
+
+  const togglePinnedGroup = () => {
+    updateState({ isPinnedExpanded: !state.isPinnedExpanded });
   };
 
-  // Toggle group expansion
-  const toggleGroup = (type: RecordTypes) => {
-    updateState({
-      expandedGroups: state.expandedGroups.includes(type)
-        ? state.expandedGroups.filter((t) => t !== type)
-        : [...state.expandedGroups, type],
+  const togglePinnedRecord = (id: string) => {
+    updateState((prevState) => {
+      const newExpandedPinnedRecords = new Set(prevState.expandedPinnedRecords);
+      if (newExpandedPinnedRecords.has(id)) {
+        newExpandedPinnedRecords.delete(id);
+      } else {
+        newExpandedPinnedRecords.add(id);
+      }
+      return { expandedPinnedRecords: newExpandedPinnedRecords };
     });
   };
 
-  // Render description with HTML support
-  const renderDescription = (description: string | undefined) => {
-    if (!description) return <p>No description available.</p>;
-    return description.includes("<p>") || description.includes("</p>") ? (
-      <div dangerouslySetInnerHTML={{ __html: description }} />
-    ) : (
-      <p>{description}</p>
-    );
+  const collapseAllPinnedRecords = () => {
+    updateState({ expandedPinnedRecords: new Set() });
   };
 
-  // Group search results by type
-  const groupResultsByType = (results: AcaiRecord[]) => {
+  const renderDescription = (description: string | undefined) => {
+    if (!description) {
+      return <p>No description available.</p>;
+    }
+    return <div dangerouslySetInnerHTML={{ __html: description }} />;
+  };
+
+  const groupResultsByType = (
+    results: AcaiRecord[]
+  ): { [key in RecordTypes]: AcaiRecord[] } => {
     const grouped: { [key in RecordTypes]: AcaiRecord[] } = {
       [RecordTypes.PERSON]: [],
       [RecordTypes.PLACE]: [],
@@ -240,10 +306,12 @@ const ACAIResourceView: React.FC = () => {
     };
 
     results.forEach((result) => {
-      result.recordType.split(",").forEach((type) => {
-        const trimmedType = type.trim().toUpperCase() as RecordTypes;
-        if (trimmedType in RecordTypes) {
-          grouped[trimmedType].push(result);
+      const types = result.recordType
+        .split(",")
+        .map((t) => t.trim().toUpperCase() as RecordTypes);
+      types.forEach((type) => {
+        if (type in RecordTypes) {
+          grouped[type].push(result);
         }
       });
     });
@@ -251,44 +319,110 @@ const ACAIResourceView: React.FC = () => {
     return grouped;
   };
 
-  // Render result group
-  const renderResultGroup = (type: RecordTypes, results: AcaiRecord[]) => {
-    if (results.length === 0) return null;
+  const renderResultItem = useCallback(
+    (result: AcaiRecord, isPinned: boolean) => {
+      console.log("renderResultItem called with:", result, isPinned);
+      const isExpanded = isPinned
+        ? state.expandedPinnedRecords.has(result.id)
+        : state.expandedResult === result.id;
 
-    const isExpanded = state.expandedGroups.includes(type);
+      return (
+        <li key={result.id} className="result-item">
+          <div
+            className="result-label"
+            onClick={() => handleResultClick(result.id, isPinned)}
+          >
+            {result.label}
+            <span
+              className={`codicon codicon-pin ${isPinned ? "pinned" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                togglePinRecord(result, isPinned);
+              }}
+              title={isPinned ? "Unpin" : "Pin"}
+            ></span>
+          </div>
+          {isExpanded && renderResultDetails(result)}
+        </li>
+      );
+    },
+    [
+      state.expandedResult,
+      state.expandedPinnedRecords,
+      togglePinRecord,
+      handleResultClick,
+    ]
+  );
 
+  const renderPinnedGroup = () => {
+    console.log("renderPinnedGroup called");
     return (
-      <div key={type} className="result-group">
-        <h3
-          className={`result-group-title ${isExpanded ? "expanded" : ""}`}
-          onClick={() => toggleGroup(type)}
-        >
-          {type} ({results.length})
-        </h3>
-        {isExpanded && (
+      <div className="result-group">
+        <div className="result-group-header">
+          <h3
+            className={`result-group-title ${
+              state.isPinnedExpanded ? "expanded" : ""
+            }`}
+            onClick={togglePinnedGroup}
+          >
+            Pinned Records ({pinnedRecords.length})
+          </h3>
+          {state.isPinnedExpanded && pinnedRecords.length > 0 && (
+            <VSCodeLink
+              className="collapse-all"
+              onClick={collapseAllPinnedRecords}
+            >
+              collapse all
+            </VSCodeLink>
+          )}
+        </div>
+        {state.isPinnedExpanded && pinnedRecords.length > 0 && (
           <ul className="result-list">
-            {results.map((result) => (
-              <li key={result.id} className="result-item">
-                <div
-                  className="result-label"
-                  onClick={() => handleResultClick(result.id)}
-                >
-                  {result.label}
-                </div>
-                {state.expandedResult === result.id &&
-                  renderResultDetails(result)}
-              </li>
-            ))}
+            {pinnedRecords.map((result) => renderResultItem(result, true))}
           </ul>
+        )}
+        {state.isPinnedExpanded && pinnedRecords.length === 0 && (
+          <p>No pinned records yet.</p>
         )}
       </div>
     );
   };
 
-  // Render result details
+  const renderResultGroup = useCallback(
+    (type: RecordTypes, results: AcaiRecord[]) => {
+      console.log("renderResultGroup called with:", type, results);
+      if (results.length === 0) return null;
+
+      const isExpanded = state.expandedGroups.includes(type);
+
+      return (
+        <div key={type} className="result-group">
+          <h3
+            className={`result-group-title ${isExpanded ? "expanded" : ""}`}
+            onClick={() => toggleGroup(type)}
+          >
+            {type} ({results.length})
+          </h3>
+          {isExpanded && (
+            <ul className="result-list">
+              {results.map((result) => renderResultItem(result, false))}
+            </ul>
+          )}
+        </div>
+      );
+    },
+    [state.expandedGroups, renderResultItem, toggleGroup]
+  );
+
   const renderResultDetails = (result: AcaiRecord) => (
     <div className="result-details">
-      <h3 className="result-details-label">{result.label}</h3>
+      <h3
+        className="result-details-label"
+        onClick={() => setExpandedDetailRecord(result)}
+        style={{ cursor: "pointer" }}
+      >
+        {result.label}
+      </h3>
       <div className="result-description">
         {renderDescription(result.description)}
       </div>
@@ -325,7 +459,27 @@ const ACAIResourceView: React.FC = () => {
     </div>
   );
 
-  // Reset filters
+  const renderExpandedDetailView = () => {
+    if (!expandedDetailRecord) return null;
+
+    return (
+      <div className="expanded-detail-view">
+        <VSCodeButton
+          appearance="icon"
+          aria-label="Go back"
+          onClick={() => setExpandedDetailRecord(null)}
+        >
+          <i className="codicon codicon-arrow-left"></i>
+        </VSCodeButton>
+        <h2>{expandedDetailRecord.label}</h2>
+        <div className="expanded-detail-content">
+          {renderResultDetails(expandedDetailRecord)}
+          <p>More info coming soon!</p>
+        </div>
+      </div>
+    );
+  };
+
   const handleResetFilters = () => {
     isResetting.current = true;
     updateState({
@@ -340,7 +494,6 @@ const ACAIResourceView: React.FC = () => {
     }, 0);
   };
 
-  // Render functions for different parts of the UI
   const renderTopLevelInputs = () => {
     if (state.searchType === SearchType.REFERENCE) {
       return (
@@ -432,88 +585,113 @@ const ACAIResourceView: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    console.log("Component mounted or updated. Current state:", state);
+  });
+
   return (
     <div className="acai-resource-view">
-      <h1>ACAI Resources</h1>
-      {/* Main search interface */}
-      <div className="select-container">
-        <label htmlFor="option-select">
-          {state.searchType === SearchType.REFERENCE
-            ? "Select a book and specify a verse reference:"
-            : "Enter a label to search for:"}
-        </label>
-        <div className="input-wrapper">
-          <div className="input-container">
-            <VSCodeButton
-              appearance="icon"
-              aria-label="Toggle filter options"
-              onClick={() =>
-                updateState({ isFilterExpanded: !state.isFilterExpanded })
-              }
-              title="Click to show or hide additional filter options"
-            >
-              <i className="codicon codicon-filter"></i>
-            </VSCodeButton>
-            {renderTopLevelInputs()}
-            <button
-              className="search-button"
-              onClick={state.isLoading ? handleCancelSearch : handleSearch}
-              title={
-                state.isLoading ? "Click to cancel search" : "Click to search"
-              }
-            >
-              {state.isLoading ? "Cancel Search" : "Search"}
-            </button>
-          </div>
-          {state.isFilterExpanded && (
-            <div className="filter-box">
-              <h4 className="filter-subheader">Search By:</h4>
-              <div className="search-input-container">
-                <VSCodeDropdown
-                  value={state.searchType}
-                  onChange={handleSearchTypeChange as any}
-                  title="Select the type of search to perform"
+      {expandedDetailRecord ? (
+        renderExpandedDetailView()
+      ) : (
+        <>
+          <h1>ACAI Resources</h1>
+          <div className="select-container">
+            <label htmlFor="option-select">
+              {state.searchType === SearchType.REFERENCE
+                ? "Select a book and specify a verse reference:"
+                : "Enter a label to search for:"}
+            </label>
+            <div className="input-wrapper">
+              <div className="input-container">
+                <VSCodeButton
+                  appearance="icon"
+                  aria-label="Toggle filter options"
+                  onClick={() =>
+                    updateState({ isFilterExpanded: !state.isFilterExpanded })
+                  }
+                  title="Click to show or hide additional filter options"
                 >
-                  {Object.values(SearchType).map((type) => (
-                    <VSCodeOption key={type} value={type}>
-                      {type}
-                    </VSCodeOption>
-                  ))}
-                </VSCodeDropdown>
+                  <i className="codicon codicon-filter"></i>
+                </VSCodeButton>
+                {renderTopLevelInputs()}
+                <button
+                  className="search-button"
+                  onClick={state.isLoading ? handleCancelSearch : handleSearch}
+                  title={
+                    state.isLoading
+                      ? "Click to cancel search"
+                      : "Click to search"
+                  }
+                >
+                  {state.isLoading ? "Cancel Search" : "Search"}
+                </button>
               </div>
-              {renderFilterBoxInputs()}
-              <h4 className="filter-subheader">Type Filter:</h4>
-              <div className="checkbox-group">
-                {Object.values(RecordTypes).map((type) => (
-                  <VSCodeCheckbox
-                    key={type}
-                    checked={state.selectedTypes.includes(type)}
-                    onChange={() =>
-                      !isResetting.current && handleTypeChange(type)
-                    }
+              {state.isFilterExpanded && (
+                <div className="filter-box">
+                  <h4 className="filter-subheader">Search By:</h4>
+                  <div className="search-input-container">
+                    <VSCodeDropdown
+                      value={state.searchType}
+                      onChange={handleSearchTypeChange as any}
+                      title="Select the type of search to perform"
+                    >
+                      {Object.values(SearchType).map((type) => (
+                        <VSCodeOption key={type} value={type}>
+                          {type}
+                        </VSCodeOption>
+                      ))}
+                    </VSCodeDropdown>
+                  </div>
+                  {renderFilterBoxInputs()}
+                  <h4 className="filter-subheader">Type Filter:</h4>
+                  <div className="checkbox-group">
+                    {Object.values(RecordTypes).map((type) => (
+                      <VSCodeCheckbox
+                        key={type}
+                        checked={state.selectedTypes.includes(type)}
+                        onChange={() =>
+                          !isResetting.current && handleTypeChange(type)
+                        }
+                      >
+                        {type.charAt(0) + type.slice(1).toLowerCase()}
+                      </VSCodeCheckbox>
+                    ))}
+                  </div>
+                  <VSCodeLink
+                    className="reset-link"
+                    onClick={handleResetFilters}
                   >
-                    {type.charAt(0) + type.slice(1).toLowerCase()}
-                  </VSCodeCheckbox>
-                ))}
-              </div>
-              <VSCodeLink className="reset-link" onClick={handleResetFilters}>
-                reset
-              </VSCodeLink>
+                    reset
+                  </VSCodeLink>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Pinned section - always visible */}
+          <div className="pinned-section">{renderPinnedGroup()}</div>
+
+          {/* Loading spinner */}
+          {state.isLoading && <div className="loading-spinner"></div>}
+
+          {/* Error message */}
+          {state.error && <div className="error-message">{state.error}</div>}
+
+          {/* Search Results section */}
+          {state.searchResult && state.searchResult.length > 0 && (
+            <div className="search-result">
+              <h2 className="section-header">Search Result</h2>
+              {Object.entries(groupResultsByType(state.searchResult)).map(
+                ([type, results]) =>
+                  renderResultGroup(
+                    type as RecordTypes,
+                    results as AcaiRecord[]
+                  )
+              )}
             </div>
           )}
-        </div>
-      </div>
-      {/* Loading spinner and error message */}
-      {state.isLoading && <div className="loading-spinner"></div>}
-      {state.error && <div className="error-message">{state.error}</div>}
-      {/* Search results */}
-      {state.searchResult && (
-        <div className="search-result">
-          <h2>Search Result</h2>
-          {Object.entries(groupResultsByType(state.searchResult)).map(
-            ([type, results]) => renderResultGroup(type as RecordTypes, results)
-          )}
-        </div>
+        </>
       )}
     </div>
   );
