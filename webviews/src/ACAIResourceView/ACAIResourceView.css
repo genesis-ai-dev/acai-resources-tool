@@ -167,7 +167,7 @@ select option {
 }
 
 .result-item.pinned {
-  border-left-color: var(--vscode-inputValidation-infoBackground);
+  border-left-color: var(--vscode-textLink-foreground);
 }
 
 .result-label {
@@ -199,7 +199,7 @@ select option {
 }
 
 .result-label:hover .codicon-pin {
-  color: var(--vscode-inputValidation-infoBackground);
+  color: var(--vscode-textLink-foreground);
 }
 
 .result-label:hover {
@@ -292,7 +292,7 @@ select option {
 
 
 .pinned-group .result-label .codicon-pinned {
-  color: var(--vscode-inputValidation-infoBackground);
+  color: var(--vscode-textLink-foreground);
 }
 
 /* Loading spinner */
@@ -451,13 +451,13 @@ select option {
 }
 
 .result-label .codicon-pin .pinned {
-  color: var(--vscode-inputValidation-infoBackground);
+  color: var(--vscode-textLink-foreground);
   transform: rotate(0deg);
 }
 
 /* Apply pinned styles to all pinned icons, regardless of location */
 .pinned-group .result-label .codicon-pin {
-  color: var(--vscode-inputValidation-infoBackground);
+  color: var(--vscode-textLink-foreground);
   transform: rotate(0deg);
 }
 
