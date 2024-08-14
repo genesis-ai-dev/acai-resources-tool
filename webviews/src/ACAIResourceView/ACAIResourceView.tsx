@@ -528,7 +528,7 @@ const ACAIResourceView: React.FC = () => {
 
   const renderPinnedGroup = () => {
     return (
-      <div className="result-group">
+      <div className="pinned-section">
         <div className="result-group-header">
           <h3
             className={`result-group-title ${
@@ -550,14 +550,14 @@ const ACAIResourceView: React.FC = () => {
         {isPinnedExpanded && pinnedRecords.length > 0 && (
           <ul className="result-list">
             {pinnedRecords.map((result) => (
-              <li key={result.id} className="result-item">
+              <li key={result.id} className="result-item pinned">
                 <div
                   className="result-label"
                   onClick={() => togglePinnedRecord(result.id)}
                 >
                   {result.label}
                   <span
-                    className="codicon codicon-pin pinned"
+                    className="codicon codicon-pinned"
                     onClick={(e) => {
                       e.stopPropagation();
                       togglePinRecord(result, true);
@@ -583,9 +583,10 @@ const ACAIResourceView: React.FC = () => {
     isPinnedVersion: boolean = false
   ) => {
     const isPinned = pinnedRecords.some((r) => r.id === result.id);
+    console.log(result.label + " is pinned: " + isPinned);
 
     return (
-      <li key={result.id} className="result-item">
+      <li key={result.id} className={`result-item ${isPinned ? "pinned" : ""}`}>
         <div
           className="result-label"
           onClick={() => handleResultClick(result.id)}
@@ -713,7 +714,7 @@ const ACAIResourceView: React.FC = () => {
           {state.isLoading && <div className="loading-spinner"></div>}
           {state.error && <div className="error-message">{state.error}</div>}
 
-          <div className="pinned-section">{renderPinnedGroup()}</div>
+          {renderPinnedGroup()}
 
           {state.searchResult && state.searchResult.length > 0 && (
             <div className="search-result">

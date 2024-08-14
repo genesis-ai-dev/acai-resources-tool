@@ -163,6 +163,11 @@ select option {
 
 .result-item {
   margin-bottom: 8px;
+  border-left: 3px solid transparent;
+}
+
+.result-item.pinned {
+  border-left-color: var(--vscode-inputValidation-infoBackground);
 }
 
 .result-label {
@@ -182,11 +187,19 @@ select option {
 }
 
 .result-label .codicon-pinned {
-  color: var(--vscode-editor-foreground);
+  color: var(--vscode-inputValidation-infoBackground);
+  transform: rotate(0deg);
 }
 
 .result-label .codicon-pin {
   color: var(--vscode-descriptionForeground);
+  transform: rotate(270deg);
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.result-label:hover .codicon-pin {
+  color: var(--vscode-inputValidation-infoBackground);
 }
 
 .result-label:hover {
@@ -275,12 +288,11 @@ select option {
 
 .pinned-group .result-group-title {
   color: var(--vscode-editor-foreground);
-  font-weight: bold;
 }
 
-.pinned-group .result-group-title::before {
-  content: '📌';
-  margin-right: 5px;
+
+.pinned-group .result-label .codicon-pinned {
+  color: var(--vscode-inputValidation-infoBackground);
 }
 
 /* Loading spinner */
@@ -438,21 +450,8 @@ select option {
   transition: transform 0.3s ease;
 }
 
-.result-label .codicon-pin::before {
-  display: inline-block;
-  transform: none;
-}
-
-.result-label .codicon-pin.pinned {
+.result-label .codicon-pin .pinned {
   color: var(--vscode-inputValidation-infoBackground);
-  transform: rotate(0deg);
-}
-
-.result-label .codicon-pin:hover {
-  transform: rotate(270deg);
-}
-
-.result-label .codicon-pin.pinned:hover {
   transform: rotate(0deg);
 }
 
