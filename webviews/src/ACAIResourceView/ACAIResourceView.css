@@ -187,7 +187,7 @@ select option {
 }
 
 .result-label .codicon-pinned {
-  color: var(--vscode-inputValidation-infoBackground);
+  color: var(--vscode-textLink-foreground);
   transform: rotate(0deg);
 }
 
