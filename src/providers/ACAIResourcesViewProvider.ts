@@ -1,18 +1,39 @@
 import * as vscode from "vscode";
 import { queryATLAS } from "../utils/queryATLAS";
 import { vrefData } from "../utils/verseData";
-import { AcaiRecord } from "../../types";
+import { AcaiRecord, VerseRefGlobalState } from "../../types";
 
 export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "acai-resources-sidebar";
   private state: ACAIResourcesState;
   private activeSearches: Map<string, AbortController> = new Map();
+  private stateStoreExtension = vscode.extensions.getExtension(
+    "project-accelerate.shared-state-store"
+  );
+  private storeListener: any;
+  private disposeFunction: (() => void) | null = null;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly context: vscode.ExtensionContext
   ) {
     this.state = this.loadState();
+    this.initStateStore();
+  }
+
+  private async initStateStore() {
+    if (this.stateStoreExtension) {
+      try {
+        const api = await this.stateStoreExtension.activate();
+        if (!api) {
+          throw new Error("State store extension does not expose an API.");
+        }
+        this.storeListener = api.storeListener;
+      } catch (error) {
+        console.error("Failed to initialize shared state store:", error);
+        this.storeListener = null;
+      }
+    }
   }
 
   public resolveWebviewView(
@@ -22,6 +43,11 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
   ) {
     this.setupWebview(webviewView);
     this.setupEventListeners(webviewView);
+
+    // Dispose the listener when the webview is disposed
+    webviewView.onDidDispose(() => {
+      this.turnOffRefListener();
+    });
   }
 
   // Helper methods
@@ -78,6 +104,45 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
       case "updatePinnedRecords":
         this.updateState({ pinnedRecords: message.pinnedRecords });
         break;
+      case "turnOnRefListener":
+        this.turnOnRefListener(webviewView);
+        break;
+      case "turnOffRefListener":
+        this.turnOffRefListener();
+        break;
+    }
+  }
+
+  private turnOnRefListener(webviewView: vscode.WebviewView): void {
+    if (!this.storeListener) {
+      this.initStateStore();
+    }
+    if (this.storeListener && !this.disposeFunction) {
+      this.disposeFunction = this.storeListener(
+        "verseRef",
+        (value: VerseRefGlobalState) => {
+          if (value) {
+            console.log(`VerseRef from state store: ${value.verseRef}`);
+            webviewView.webview.postMessage({
+              command: "reload",
+              data: { verseRef: value.verseRef, uri: value.uri },
+            });
+          }
+        }
+      );
+      vscode.window.showInformationMessage("Reference listener turned on.");
+    } else {
+      vscode.window.showWarningMessage(
+        "Automatic verse reference search is unavailable. Make sure the Shared State Store extension is installed and reload the window to try again."
+      );
+    }
+  }
+
+  private turnOffRefListener(): void {
+    if (this.disposeFunction) {
+      this.disposeFunction();
+      this.disposeFunction = null;
+      vscode.window.showInformationMessage("Reference listener turned off.");
     }
   }
 

@@ -84,6 +84,7 @@ const ACAIResourceView: React.FC = () => {
   const isResetting = useRef(false);
   const [expandedDetailRecord, setExpandedDetailRecord] =
     useState<AcaiRecord | null>(null);
+  const [isAutoEnabled, setIsAutoEnabled] = useState(false);
 
   // Memoize the updateState function
   const updateState = useCallback(
@@ -387,48 +388,88 @@ const ACAIResourceView: React.FC = () => {
   };
 
   const renderFilterBoxInputs = () => {
-    if (state.searchType === SearchType.REFERENCE) {
-      return (
-        <>
-          <h4 className="filter-subheader">Label Filter:</h4>
+    return (
+      <>
+        <h4 className="filter-subheader">Search by:</h4>
+        <div className="filter-row">
+          <VSCodeDropdown
+            value={state.searchType}
+            onChange={handleSearchTypeChange as any}
+          >
+            <VSCodeOption value={SearchType.REFERENCE}>Reference</VSCodeOption>
+            <VSCodeOption value={SearchType.LABEL}>Label</VSCodeOption>
+          </VSCodeDropdown>
+        </div>
+        {state.searchType === SearchType.REFERENCE && (
           <div className="filter-row">
-            <VSCodeTextField
-              placeholder="Enter label"
-              value={state.labelInput}
-              onChange={(e: any) => updateState({ labelInput: e.target.value })}
-            />
-          </div>
-        </>
-      );
-    } else {
-      return (
-        <>
-          <h4 className="filter-subheader">Reference Filter:</h4>
-          <div className="filter-row">
-            <VSCodeDropdown
-              value={state.selectedOption}
-              onChange={(e: any) =>
-                updateState({ selectedOption: e.target.value })
-              }
+            <VSCodeCheckbox
+              checked={isAutoEnabled}
+              onChange={handleAutoChange as any}
             >
-              <VSCodeOption value="">--</VSCodeOption>
-              {options.map((option) => (
-                <VSCodeOption key={option.id} value={option.id}>
-                  {option.name}
-                </VSCodeOption>
-              ))}
-            </VSCodeDropdown>
+              Auto
+            </VSCodeCheckbox>
           </div>
-          <div className="filter-row filter-row-gap">
-            <VSCodeTextField
-              placeholder="verse ref."
-              value={state.textInput}
-              onChange={(e: any) => updateState({ textInput: e.target.value })}
-            />
-          </div>
-        </>
-      );
-    }
+        )}
+        {state.searchType === SearchType.REFERENCE && (
+          <>
+            <h4 className="filter-subheader">Label Filter:</h4>
+            <div className="filter-row">
+              <VSCodeTextField
+                placeholder="Enter label"
+                value={state.labelInput}
+                onChange={(e: any) =>
+                  updateState({ labelInput: e.target.value })
+                }
+              />
+            </div>
+          </>
+        )}
+        {state.searchType === SearchType.LABEL && (
+          <>
+            <h4 className="filter-subheader">Reference Filter:</h4>
+            <div className="filter-row">
+              <VSCodeDropdown
+                value={state.selectedOption}
+                onChange={(e: any) =>
+                  updateState({ selectedOption: e.target.value })
+                }
+              >
+                <VSCodeOption value="">--</VSCodeOption>
+                {options.map((option) => (
+                  <VSCodeOption key={option.id} value={option.id}>
+                    {option.name}
+                  </VSCodeOption>
+                ))}
+              </VSCodeDropdown>
+            </div>
+            <div className="filter-row filter-row-gap">
+              <VSCodeTextField
+                placeholder="verse ref."
+                value={state.textInput}
+                onChange={(e: any) =>
+                  updateState({ textInput: e.target.value })
+                }
+              />
+            </div>
+          </>
+        )}
+        <h4 className="filter-subheader">Type Filter:</h4>
+        <div className="checkbox-group">
+          {Object.values(RecordTypes).map((type) => (
+            <VSCodeCheckbox
+              key={type}
+              checked={state.selectedTypes.includes(type)}
+              onChange={() => !isResetting.current && handleTypeChange(type)}
+            >
+              {type.charAt(0) + type.slice(1).toLowerCase()}
+            </VSCodeCheckbox>
+          ))}
+        </div>
+        <VSCodeLink className="reset-link" onClick={handleResetFilters}>
+          reset
+        </VSCodeLink>
+      </>
+    );
   };
 
   const [pinnedRecords, setPinnedRecords] = useState<AcaiRecord[]>([]);
@@ -583,8 +624,6 @@ const ACAIResourceView: React.FC = () => {
     isPinnedVersion: boolean = false
   ) => {
     const isPinned = pinnedRecords.some((r) => r.id === result.id);
-    console.log(result.label + " is pinned: " + isPinned);
-
     return (
       <li key={result.id} className={`result-item ${isPinned ? "pinned" : ""}`}>
         <div
@@ -632,6 +671,16 @@ const ACAIResourceView: React.FC = () => {
     );
   };
 
+  const handleAutoChange = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    setIsAutoEnabled(target.checked);
+    if (target.checked) {
+      vscode.postMessage({ command: "turnOnRefListener" });
+    } else {
+      vscode.postMessage({ command: "turnOffRefListener" });
+    }
+  };
+
   return (
     <div className="acai-resource-view">
       {expandedDetailRecord ? (
@@ -671,43 +720,7 @@ const ACAIResourceView: React.FC = () => {
                 </button>
               </div>
               {state.isFilterExpanded && (
-                <div className="filter-box">
-                  <h4 className="filter-subheader">Search By:</h4>
-                  <div className="search-input-container">
-                    <VSCodeDropdown
-                      value={state.searchType}
-                      onChange={handleSearchTypeChange as any}
-                      title="Select the type of search to perform"
-                    >
-                      {Object.values(SearchType).map((type) => (
-                        <VSCodeOption key={type} value={type}>
-                          {type}
-                        </VSCodeOption>
-                      ))}
-                    </VSCodeDropdown>
-                  </div>
-                  {renderFilterBoxInputs()}
-                  <h4 className="filter-subheader">Type Filter:</h4>
-                  <div className="checkbox-group">
-                    {Object.values(RecordTypes).map((type) => (
-                      <VSCodeCheckbox
-                        key={type}
-                        checked={state.selectedTypes.includes(type)}
-                        onChange={() =>
-                          !isResetting.current && handleTypeChange(type)
-                        }
-                      >
-                        {type.charAt(0) + type.slice(1).toLowerCase()}
-                      </VSCodeCheckbox>
-                    ))}
-                  </div>
-                  <VSCodeLink
-                    className="reset-link"
-                    onClick={handleResetFilters}
-                  >
-                    reset
-                  </VSCodeLink>
-                </div>
+                <div className="filter-box">{renderFilterBoxInputs()}</div>
               )}
             </div>
           </div>
