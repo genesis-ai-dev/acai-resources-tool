@@ -43,7 +43,7 @@ enum SearchType {
 
 interface ACAIResourceViewState {
   selectedOption: string;
-  textInput: string;
+  verseRefInput: string;
   searchResult: AcaiRecord[] | null;
   error: string | null;
   isLoading: boolean;
@@ -59,7 +59,7 @@ interface ACAIResourceViewState {
 
 const initialState: ACAIResourceViewState = {
   selectedOption: "",
-  textInput: "",
+  verseRefInput: "",
   searchResult: null,
   error: null,
   isLoading: false,
@@ -147,6 +147,12 @@ const ACAIResourceView: React.FC = () => {
         case "restoreState":
           updateState(message);
           break;
+        case "updatePinnedRecords":
+          setState((prevState) => ({
+            ...prevState,
+            pinnedRecords: message.pinnedRecords,
+          }));
+          break;
       }
     };
 
@@ -176,7 +182,7 @@ const ACAIResourceView: React.FC = () => {
       bookId:
         state.searchType === SearchType.REFERENCE ? state.selectedOption : "",
       verseRef:
-        state.searchType === SearchType.REFERENCE ? state.textInput : "",
+        state.searchType === SearchType.REFERENCE ? state.verseRefInput : "",
       types: state.selectedTypes,
       searchType: state.searchType,
       labelInput:
@@ -331,7 +337,7 @@ const ACAIResourceView: React.FC = () => {
     updateState({
       selectedTypes: [],
       labelInput: "",
-      textInput: "",
+      verseRefInput: "",
       selectedOption: "",
       topLevelLabelInput: "",
     });
@@ -361,11 +367,11 @@ const ACAIResourceView: React.FC = () => {
           <input
             type="text"
             className="text-input"
-            value={state.textInput}
+            value={state.verseRefInput}
             onChange={(e) => {
               const value = e.target.value;
               if (/^[0-9:\s-]*$/.test(value)) {
-                updateState({ textInput: value });
+                updateState({ verseRefInput: value });
               }
             }}
             placeholder="verse ref."
@@ -445,9 +451,9 @@ const ACAIResourceView: React.FC = () => {
             <div className="filter-row filter-row-gap">
               <VSCodeTextField
                 placeholder="verse ref."
-                value={state.textInput}
+                value={state.verseRefInput}
                 onChange={(e: any) =>
-                  updateState({ textInput: e.target.value })
+                  updateState({ verseRefInput: e.target.value })
                 }
               />
             </div>
@@ -472,75 +478,38 @@ const ACAIResourceView: React.FC = () => {
     );
   };
 
-  const [pinnedRecords, setPinnedRecords] = useState<AcaiRecord[]>([]);
-
   const togglePinRecord = useCallback(
     (record: AcaiRecord, isPinnedVersion: boolean) => {
-      setPinnedRecords((prevPinnedRecords) => {
-        const isPinned = prevPinnedRecords.some((r) => r.id === record.id);
+      setState((prevState) => {
+        const isPinned = prevState.pinnedRecords.some(
+          (r) => r.id === record.id
+        );
+        let newPinnedRecords: AcaiRecord[];
 
-        if (isPinned && !isPinnedVersion) {
-          return prevPinnedRecords;
-        }
-
-        let newPinnedRecords;
         if (isPinned) {
-          newPinnedRecords = prevPinnedRecords.filter(
+          // Always remove the record if it's already pinned, regardless of where it's clicked
+          newPinnedRecords = prevState.pinnedRecords.filter(
             (r) => r.id !== record.id
           );
+        } else if (!isPinnedVersion) {
+          // Only add the record if it's not already pinned and not clicked in the pinned version
+          newPinnedRecords = [...prevState.pinnedRecords, record];
         } else {
-          newPinnedRecords = [...prevPinnedRecords, record];
+          // No change needed if trying to pin an already pinned record in the pinned version
+          return prevState;
         }
 
         // Update the state in the extension
         vscode.postMessage({
-          command: "updateState",
-          state: { pinnedRecords: newPinnedRecords },
+          command: "updatePinnedRecords",
+          pinnedRecords: newPinnedRecords,
         });
 
-        return newPinnedRecords;
+        return { ...prevState, pinnedRecords: newPinnedRecords };
       });
     },
     []
   );
-
-  useEffect(() => {
-    const messageListener = (event: MessageEvent) => {
-      const message = event.data;
-      switch (message.command) {
-        case "setBookData":
-          setOptions(message.bookData);
-          break;
-        case "searchResult":
-          updateState({
-            searchResult: message.result,
-            error: null,
-            isLoading: false,
-          });
-          break;
-        case "searchError":
-          updateState({
-            error: message.error,
-            searchResult: null,
-            isLoading: false,
-          });
-          break;
-        case "restoreState":
-          setState((prevState) => ({
-            ...prevState,
-            ...message,
-            pinnedRecords: message.pinnedRecords || [],
-          }));
-          setPinnedRecords(message.pinnedRecords || []);
-          break;
-      }
-    };
-
-    window.addEventListener("message", messageListener);
-    vscode.postMessage({ command: "requestInitialData" });
-
-    return () => window.removeEventListener("message", messageListener);
-  }, [updateState]);
 
   const [isPinnedExpanded, setIsPinnedExpanded] = useState(true);
   const [expandedPinnedRecords, setExpandedPinnedRecords] = useState<
@@ -577,9 +546,9 @@ const ACAIResourceView: React.FC = () => {
             }`}
             onClick={togglePinnedGroup}
           >
-            Pinned Records ({pinnedRecords.length})
+            Pinned Records ({state.pinnedRecords.length})
           </h3>
-          {isPinnedExpanded && pinnedRecords.length > 0 && (
+          {isPinnedExpanded && state.pinnedRecords.length > 0 && (
             <VSCodeLink
               className="collapse-all"
               onClick={collapseAllPinnedRecords}
@@ -588,9 +557,9 @@ const ACAIResourceView: React.FC = () => {
             </VSCodeLink>
           )}
         </div>
-        {isPinnedExpanded && pinnedRecords.length > 0 && (
+        {isPinnedExpanded && state.pinnedRecords.length > 0 && (
           <ul className="result-list">
-            {pinnedRecords.map((result) => (
+            {state.pinnedRecords.map((result) => (
               <li key={result.id} className="result-item pinned">
                 <div
                   className="result-label"
@@ -612,7 +581,7 @@ const ACAIResourceView: React.FC = () => {
             ))}
           </ul>
         )}
-        {isPinnedExpanded && pinnedRecords.length === 0 && (
+        {isPinnedExpanded && state.pinnedRecords.length === 0 && (
           <p>No pinned records yet.</p>
         )}
       </div>
@@ -623,7 +592,9 @@ const ACAIResourceView: React.FC = () => {
     result: AcaiRecord,
     isPinnedVersion: boolean = false
   ) => {
-    const isPinned = pinnedRecords.some((r) => r.id === result.id);
+    const isPinned = state.pinnedRecords.some((r) => r.id === result.id);
+    console.log(result.label + " is pinned: " + isPinned);
+
     return (
       <li key={result.id} className={`result-item ${isPinned ? "pinned" : ""}`}>
         <div

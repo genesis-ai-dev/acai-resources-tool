@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 import { queryATLAS } from "../utils/queryATLAS";
 import { vrefData } from "../utils/verseData";
-import { AcaiRecord, VerseRefGlobalState } from "../../types";
+import { AcaiRecord } from "../../types";
+import { VerseRefGlobalState } from "../../types";
 
 export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "acai-resources-sidebar";
@@ -102,47 +103,8 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
         this.restoreState(webviewView);
         break;
       case "updatePinnedRecords":
-        this.updateState({ pinnedRecords: message.pinnedRecords });
+        this.updatePinnedRecords(message.pinnedRecords, webviewView);
         break;
-      case "turnOnRefListener":
-        this.turnOnRefListener(webviewView);
-        break;
-      case "turnOffRefListener":
-        this.turnOffRefListener();
-        break;
-    }
-  }
-
-  private turnOnRefListener(webviewView: vscode.WebviewView): void {
-    if (!this.storeListener) {
-      this.initStateStore();
-    }
-    if (this.storeListener && !this.disposeFunction) {
-      this.disposeFunction = this.storeListener(
-        "verseRef",
-        (value: VerseRefGlobalState) => {
-          if (value) {
-            console.log(`VerseRef from state store: ${value.verseRef}`);
-            webviewView.webview.postMessage({
-              command: "reload",
-              data: { verseRef: value.verseRef, uri: value.uri },
-            });
-          }
-        }
-      );
-      vscode.window.showInformationMessage("Reference listener turned on.");
-    } else {
-      vscode.window.showWarningMessage(
-        "Automatic verse reference search is unavailable. Make sure the Shared State Store extension is installed and reload the window to try again."
-      );
-    }
-  }
-
-  private turnOffRefListener(): void {
-    if (this.disposeFunction) {
-      this.disposeFunction();
-      this.disposeFunction = null;
-      vscode.window.showInformationMessage("Reference listener turned off.");
     }
   }
 
@@ -212,7 +174,48 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  // ... (other helper methods)
+  private updatePinnedRecords(
+    pinnedRecords: AcaiRecord[],
+    webviewView: vscode.WebviewView
+  ): void {
+    this.updateState({ pinnedRecords });
+    webviewView.webview.postMessage({
+      command: "updatePinnedRecords",
+      pinnedRecords: this.state.pinnedRecords,
+    });
+  }
+
+  private handleSearchError(
+    error: any,
+    searchId: string,
+    webviewView: vscode.WebviewView
+  ): void {
+    let errorMessage = "An error occurred while searching. Please try again.";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    if (errorMessage !== "Search cancelled") {
+      webviewView.webview.postMessage({
+        command: "searchError",
+        error: errorMessage,
+        searchId: searchId,
+      });
+    }
+  }
+
+  private restoreState(webviewView: vscode.WebviewView): void {
+    webviewView.webview.postMessage({
+      command: "restoreState",
+      selectedOption: this.state.selectedOption,
+      textInput: this.state.textInput,
+      searchResult: this.state.searchResult,
+      selectedTypes: this.state.selectedTypes,
+      searchType: this.state.searchType,
+      labelInput: this.state.labelInput,
+      topLevelLabelInput: this.state.topLevelLabelInput,
+      pinnedRecords: this.state.pinnedRecords,
+    });
+  }
 
   // State management
 
@@ -307,36 +310,39 @@ export class ACAIResourcesViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  private handleSearchError(
-    error: any,
-    searchId: string,
-    webviewView: vscode.WebviewView
-  ): void {
-    let errorMessage = "An error occurred while searching. Please try again.";
-    if (error instanceof Error) {
-      errorMessage = error.message;
+  private turnOnRefListener(webviewView: vscode.WebviewView): void {
+    if (!this.storeListener) {
+      this.initStateStore();
     }
-    if (errorMessage !== "Search cancelled") {
-      webviewView.webview.postMessage({
-        command: "searchError",
-        error: errorMessage,
-        searchId: searchId,
-      });
+    if (this.storeListener && !this.disposeFunction) {
+      this.disposeFunction = this.storeListener(
+        "verseRef",
+        (value: VerseRefGlobalState) => {
+          if (value) {
+            // cut off everything after and including the colon
+            const verseRef = value.verseRef.split(":")[0];
+            console.log(`VerseRef from state store: ${verseRef}`);
+            webviewView.webview.postMessage({
+              command: "reload",
+              data: { verseRef, uri: value.uri },
+            });
+          }
+        }
+      );
+      vscode.window.showInformationMessage("Reference listener turned on.");
+    } else {
+      vscode.window.showWarningMessage(
+        "Automatic verse reference search is unavailable. Make sure the Shared State Store extension is installed and reload the window to try again."
+      );
     }
   }
 
-  private restoreState(webviewView: vscode.WebviewView): void {
-    webviewView.webview.postMessage({
-      command: "restoreState",
-      selectedOption: this.state.selectedOption,
-      textInput: this.state.textInput,
-      searchResult: this.state.searchResult,
-      selectedTypes: this.state.selectedTypes,
-      searchType: this.state.searchType,
-      labelInput: this.state.labelInput,
-      topLevelLabelInput: this.state.topLevelLabelInput,
-      pinnedRecords: this.state.pinnedRecords,
-    });
+  private turnOffRefListener(): void {
+    if (this.disposeFunction) {
+      this.disposeFunction();
+      this.disposeFunction = null;
+      vscode.window.showInformationMessage("Reference listener turned off.");
+    }
   }
 }
 
@@ -365,3 +371,8 @@ interface SearchMessage {
   searchType: string;
   searchId: string;
 }
+
+// interface VerseRefGlobalState {
+//   verseRef: string;
+//   uri: string;
+// }
